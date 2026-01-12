@@ -1,0 +1,16 @@
+{
+  "short_name": "FinZen",
+  "name": "João.ai Finance",
+  "icons": [
+    {
+      "src": "logo.svg",
+      "type": "image/svg+xml",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#F7F9F8",
+  "background_color": "#F7F9F8",
+  "orientation": "portrait"
+}
