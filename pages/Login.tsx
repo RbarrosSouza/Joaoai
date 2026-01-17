@@ -37,12 +37,23 @@ const Login: React.FC = () => {
       });
 
       if (error) {
-        addToast('Não consegui entrar. Verifique seus dados.', 'ERROR');
+        const status = (error as any)?.status as number | undefined;
+        if (status === 401) {
+          addToast(
+            'Não consegui entrar porque a configuração do Supabase em produção parece inválida (URL/chave). Verifique as envs da Vercel e redeploy.',
+            'ERROR',
+          );
+        } else {
+          addToast(`Não consegui entrar. ${error.message}`, 'ERROR');
+        }
         return;
       }
 
       addToast('Bem-vindo(a)!', 'SUCCESS');
       navigate('/', { replace: true });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Erro inesperado.';
+      addToast(`Não consegui entrar. ${message}`, 'ERROR');
     } finally {
       setIsSubmitting(false);
     }
