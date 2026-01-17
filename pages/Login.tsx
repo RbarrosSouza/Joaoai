@@ -117,6 +117,11 @@ const Login: React.FC = () => {
             <div className="mt-2 text-[12px] text-red-600/90 font-medium">
               Faltando: {supabaseStatus.missing.join(', ')}.
             </div>
+            {supabaseStatus.issues.length > 0 && (
+              <div className="mt-2 text-[12px] text-red-600/90 font-medium">
+                Problemas: {supabaseStatus.issues.join(' | ')}
+              </div>
+            )}
             <div className="mt-2 text-[11px] text-slate-500">
               Se você está rodando local (ex.: <span className="font-semibold">192.168…</span>), as envs da Vercel não aplicam — crie um{' '}
               <span className="font-semibold">.env.local</span> com <span className="font-semibold">VITE_SUPABASE_URL</span> e{' '}

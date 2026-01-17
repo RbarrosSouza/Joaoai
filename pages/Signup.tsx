@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { ArrowRight, Eye, EyeOff, Mail, Phone, User } from 'lucide-react';
 import AuthShell from './AuthShell';
 import { useToast } from '../components/Toast';
-import { getSupabaseClient, getSupabaseEnvStatus } from '../services/supabaseClient';
+import { getAuthRedirectTo, getSupabaseClient, getSupabaseEnvStatus } from '../services/supabaseClient';
 
 function normalizePhoneE164Like(input: string): string | null {
   const cleaned = (input ?? '').toString().trim().replace(/[^0-9+]/g, '');
@@ -62,6 +62,8 @@ const Signup: React.FC = () => {
         email: email.trim(),
         password,
         options: {
+          // Garante callback consistente em produção (HashRouter + PKCE).
+          emailRedirectTo: getAuthRedirectTo() || undefined,
           data: {
             name: name.trim(),
             phone_e164: normalizedPhone,
@@ -70,7 +72,8 @@ const Signup: React.FC = () => {
       });
 
       if (error) {
-        addToast('Não consegui criar sua conta. Verifique os dados e tente de novo.', 'ERROR');
+        // Mostramos a mensagem do Supabase para destravar diagnósticos de produção (redirect inválido, signups desabilitados, etc).
+        addToast(`Não consegui criar sua conta. ${error.message}`, 'ERROR');
         return;
       }
 
@@ -82,6 +85,9 @@ const Signup: React.FC = () => {
         addToast('Conta criada! Agora confirme seu e-mail para entrar.', 'SUCCESS');
         navigate('/login', { replace: true });
       }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Erro inesperado.';
+      addToast(`Não consegui criar sua conta. ${message}`, 'ERROR');
     } finally {
       setIsSubmitting(false);
     }
@@ -193,6 +199,11 @@ const Signup: React.FC = () => {
             <div className="mt-2 text-[12px] text-red-600/90 font-medium">
               Faltando: {supabaseStatus.missing.join(', ')}.
             </div>
+            {supabaseStatus.issues.length > 0 && (
+              <div className="mt-2 text-[12px] text-red-600/90 font-medium">
+                Problemas: {supabaseStatus.issues.join(' | ')}
+              </div>
+            )}
             <div className="mt-2 text-[11px] text-slate-500">
               Se você está rodando local (ex.: <span className="font-semibold">192.168…</span>), as envs da Vercel não aplicam — crie um{' '}
               <span className="font-semibold">.env.local</span> com <span className="font-semibold">VITE_SUPABASE_URL</span> e{' '}
