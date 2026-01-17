@@ -1,15 +1,22 @@
 import React, { createContext, useContext, useState, ReactNode, useMemo, useEffect } from 'react';
 import { Account, CreditCard, Transaction, MonthlyStats, TransactionType, Category } from '../types';
-import { INITIAL_ACCOUNTS, INITIAL_CARDS, INITIAL_TRANSACTIONS, CATEGORIES } from '../constants';
+import { CATEGORIES } from '../constants';
 import { useToast } from '../components/Toast';
+import { useAuth } from './AuthContext';
+import { buildDefaultCategories, buildDefaultUserSettings, type UserSettings } from './financeDefaults';
+import { readUserSettings, writeUserSettings } from './financeStorage';
 
-interface UserSettings {
-  name: string;
-  email: string;
-  enableNotifications: boolean;
-  notifyBillDue: boolean;
-  notifyLimitAlert: boolean;
-  notifyOverdue: boolean;
+function getAuthDisplayName(user: any): string {
+  const md = (user?.user_metadata ?? {}) as Record<string, unknown>;
+  const candidates = [
+    md.name,
+    md.display_name,
+    md.full_name,
+    md.first_name,
+  ];
+  const name = candidates.find((v) => typeof v === 'string' && v.trim().length > 0);
+  // IMPORTANT: não inventar nome genérico. Se não houver, deixa vazio e a UI não mostra “, João”.
+  return typeof name === 'string' ? name.trim() : '';
 }
 
 interface FinanceContextType {
@@ -58,33 +65,43 @@ interface FinanceContextType {
 
 const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
 
-const DEFAULT_SETTINGS: UserSettings = {
-  name: 'João',
-  email: 'joao@exemplo.com',
-  enableNotifications: true,
-  notifyBillDue: true,
-  notifyLimitAlert: true,
-  notifyOverdue: true
-};
-
 export const FinanceProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { addToast } = useToast();
+  const { user } = useAuth();
+  const userId = user?.id ?? 'anonymous';
   
-  const [accounts, setAccounts] = useState<Account[]>(INITIAL_ACCOUNTS);
-  const [cards, setCards] = useState<CreditCard[]>(INITIAL_CARDS);
-  const [transactions, setTransactions] = useState<Transaction[]>(INITIAL_TRANSACTIONS);
-  const [categories, setCategories] = useState<Category[]>(CATEGORIES);
+  // Novo usuário deve iniciar sempre vazio.
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [cards, setCards] = useState<CreditCard[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [categories, setCategories] = useState<Category[]>(() => buildDefaultCategories(CATEGORIES));
   
   // User Profile & Settings State (with Persistence)
   const [userSettings, setUserSettings] = useState<UserSettings>(() => {
-    const saved = localStorage.getItem('finzen_settings');
-    return saved ? JSON.parse(saved) : DEFAULT_SETTINGS;
+    const fallback = buildDefaultUserSettings({
+      name: getAuthDisplayName(user),
+      email: user?.email ?? '',
+    });
+    return readUserSettings({ userId, userEmail: user?.email, fallback });
   });
 
   // Persist Settings Effect
   useEffect(() => {
-    localStorage.setItem('finzen_settings', JSON.stringify(userSettings));
-  }, [userSettings]);
+    writeUserSettings({ userId, settings: userSettings });
+  }, [userId, userSettings]);
+
+  // Mantém nome/e-mail coerentes com o cadastro (sem sobrescrever se o usuário personalizou depois).
+  useEffect(() => {
+    if (!user) return;
+    const authName = getAuthDisplayName(user);
+    const authEmail = user.email ?? '';
+    setUserSettings((prev) => {
+      const next = { ...prev };
+      if (!next.name?.trim() && authName) next.name = authName;
+      if (!next.email?.trim() && authEmail) next.email = authEmail;
+      return next;
+    });
+  }, [user]);
   
   // Privacy Mode State (Default true for Privacy First)
   const [isPrivacyMode, setIsPrivacyMode] = useState(true);

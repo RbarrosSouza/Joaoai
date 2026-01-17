@@ -3,6 +3,8 @@ import { X, Tag, ChevronDown, Calendar, Repeat, CreditCard, Landmark, Wallet, La
 import { useFinance, useCategories } from '../services/FinanceContext';
 import { TransactionType, TransactionFrequency, Transaction } from '../types';
 import { getIcon } from '../constants';
+import { useNavigate } from 'react-router-dom';
+import { useToast } from './Toast';
 
 interface TransactionModalProps {
   onClose: () => void;
@@ -10,6 +12,8 @@ interface TransactionModalProps {
 }
 
 const TransactionModal: React.FC<TransactionModalProps> = ({ onClose, editingTransaction }) => {
+  const navigate = useNavigate();
+  const { addToast } = useToast();
   const { addMultipleTransactions, updateTransaction, deleteTransaction, accounts, cards } = useFinance();
   const allCategories = useCategories();
   
@@ -31,9 +35,26 @@ const TransactionModal: React.FC<TransactionModalProps> = ({ onClose, editingTra
   const [subCategoryId, setSubCategoryId] = useState<string | undefined>(undefined);
   
   const [selectedSourceType, setSelectedSourceType] = useState<'ACCOUNT' | 'CARD'>('ACCOUNT');
-  const [selectedSourceId, setSelectedSourceId] = useState(accounts[0].id);
+  const [selectedSourceId, setSelectedSourceId] = useState(accounts[0]?.id || '');
 
   const selectedCategory = activeCategories.find(c => c.id === categoryId);
+
+  // Se o usuário está começando do zero: ajusta origem automaticamente para evitar estados inválidos.
+  useEffect(() => {
+    if (editingTransaction) return;
+    if (selectedSourceType === 'ACCOUNT' && accounts.length === 0) {
+      if (type === TransactionType.EXPENSE && cards.length > 0) {
+        setSelectedSourceType('CARD');
+        setSelectedSourceId(cards[0]?.id || '');
+      } else {
+        setSelectedSourceId('');
+      }
+    }
+    if (selectedSourceType === 'CARD' && cards.length === 0) {
+      setSelectedSourceType('ACCOUNT');
+      setSelectedSourceId(accounts[0]?.id || '');
+    }
+  }, [accounts, cards, editingTransaction, selectedSourceType, type]);
 
   // Load Editing Data
   useEffect(() => {
@@ -116,6 +137,18 @@ const TransactionModal: React.FC<TransactionModalProps> = ({ onClose, editingTra
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!amount || !description || !categoryId) return;
+
+    // Novo usuário pode ainda não ter conta/cartão configurado.
+    if (!editingTransaction) {
+      if (selectedSourceType === 'ACCOUNT' && (!selectedSourceId || accounts.length === 0)) {
+        addToast('Antes de lançar, cadastre uma conta ou carteira em "Contas".', 'INFO');
+        return;
+      }
+      if (selectedSourceType === 'CARD' && (!selectedSourceId || cards.length === 0)) {
+        addToast('Antes de lançar no cartão, cadastre um cartão em "Cartões".', 'INFO');
+        return;
+      }
+    }
     
     triggerHaptic(); // Vibrate on submit
 
@@ -396,6 +429,20 @@ const TransactionModal: React.FC<TransactionModalProps> = ({ onClose, editingTra
 
             <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
                 {selectedSourceType === 'ACCOUNT' ? (
+                    accounts.length === 0 ? (
+                      <div className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm text-slate-600 flex items-center justify-between gap-4">
+                        <span className="font-medium">
+                          Você ainda não tem contas. Cadastre uma para registrar lançamentos.
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => { onClose(); navigate('/accounts'); }}
+                          className="px-4 py-2 rounded-xl bg-white border border-slate-200 font-bold text-brand-deep hover:border-brand-lime transition-colors"
+                        >
+                          Cadastrar conta
+                        </button>
+                      </div>
+                    ) : (
                     accounts.map(acc => (
                         <button
                           key={acc.id}
@@ -411,7 +458,22 @@ const TransactionModal: React.FC<TransactionModalProps> = ({ onClose, editingTra
                             {selectedSourceId === acc.id && <div className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-brand-lime"></div>}
                         </button>
                     ))
+                    )
                 ) : (
+                    cards.length === 0 ? (
+                      <div className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm text-slate-600 flex items-center justify-between gap-4">
+                        <span className="font-medium">
+                          Você ainda não tem cartões. Cadastre um para registrar compras no crédito.
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => { onClose(); navigate('/cards'); }}
+                          className="px-4 py-2 rounded-xl bg-white border border-slate-200 font-bold text-brand-deep hover:border-brand-lime transition-colors"
+                        >
+                          Cadastrar cartão
+                        </button>
+                      </div>
+                    ) : (
                     cards.map(card => (
                         <button
                           key={card.id}
@@ -428,6 +490,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({ onClose, editingTra
                             {selectedSourceId === card.id && <div className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-brand-lime z-10"></div>}
                         </button>
                     ))
+                    )
                 )}
             </div>
           </div>

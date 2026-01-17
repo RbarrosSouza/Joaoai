@@ -170,14 +170,36 @@ const Dashboard: React.FC = () => {
     return 'Boa noite';
   };
 
-  // --- CHART DATA ---
-  const monthlyComparisonData = [
-    { name: 'Set', receitas: 4000, despesas: 2400 },
-    { name: 'Out', receitas: 3000, despesas: 1398 },
-    { name: 'Nov', receitas: 9800, despesas: 2000 },
-    { name: 'Dez', receitas: 6500, despesas: 4800 },
-    { name: 'Jan', receitas: income, despesas: expenses },
-  ];
+  // --- CHART DATA (REAL / SEM MOCK) ---
+  const monthlyComparisonData = useMemo(() => {
+    const now = new Date();
+    const monthsBack = 4; // total 5 meses (inclui o atual)
+    const buckets = Array.from({ length: monthsBack + 1 }).map((_, idx) => {
+      const d = new Date(now);
+      d.setDate(1);
+      d.setMonth(d.getMonth() - (monthsBack - idx));
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      return {
+        key,
+        name: d.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', ''),
+        receitas: 0,
+        despesas: 0,
+      };
+    });
+
+    const byKey = new Map(buckets.map((b) => [b.key, b]));
+    transactions.forEach((t) => {
+      if (t.isPending) return; // só realizado
+      const d = new Date(t.paymentDate || t.date);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const bucket = byKey.get(key);
+      if (!bucket) return;
+      if (t.type === TransactionType.INCOME) bucket.receitas += t.amount;
+      if (t.type === TransactionType.EXPENSE) bucket.despesas += t.amount;
+    });
+
+    return buckets;
+  }, [transactions]);
 
   const categorySpending = useMemo(() => {
     const stats = categories.map(cat => {
@@ -216,7 +238,7 @@ const Dashboard: React.FC = () => {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm text-slate-400 font-medium mb-0.5 animate-fade-in flex items-center gap-2 truncate">
-              {getGreeting()}, {userSettings.name}
+              {getGreeting()}{userSettings.name ? `, ${userSettings.name}` : ''}
               <span className="w-1.5 h-1.5 rounded-full bg-brand-lime shrink-0"></span>
             </p>
             <h1 className="text-2xl md:text-3xl font-light text-slate-800 tracking-tight truncate">
@@ -409,29 +431,30 @@ const Dashboard: React.FC = () => {
              </div>
          </div>
 
-         <div className="card-base p-6 flex flex-col justify-between relative overflow-hidden group hover:shadow-float transition-all border border-brand-lime/20">
-             <div className="absolute inset-0 bg-brand-lime/5 opacity-50"></div>
-             <div className="relative z-10">
-                 <div className="flex justify-between items-start mb-4">
-                     <div className="w-10 h-10 rounded-full bg-white border border-brand-lime/20 flex items-center justify-center text-brand-deep">
-                         <Target size={20} strokeWidth={2} />
-                     </div>
-                     <span className="text-[10px] font-bold text-brand-deep bg-brand-lime/20 px-2 py-0.5 rounded-full">ATIVO</span>
-                 </div>
-                 <div>
-                     <p className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">Meta Economia</p>
-                     <div className="flex items-baseline gap-2">
-                        <p className={`text-2xl font-semibold text-brand-deep tracking-tight transition-all duration-300 ${privacyClass}`}>
-                            {formatCurrency(450)}
-                        </p>
-                        <span className="text-xs text-slate-400 font-medium">/ 1k</span>
-                     </div>
-                     <div className="w-full h-1 bg-slate-200 rounded-full mt-3 overflow-hidden">
-                        <div className="h-full bg-brand-lime w-[45%] rounded-full"></div>
-                     </div>
-                 </div>
-             </div>
-         </div>
+        <div
+          className="card-base p-6 flex flex-col justify-between relative overflow-hidden group hover:shadow-float transition-all border border-brand-lime/20"
+          onClick={() => navigate('/planning')}
+          role="button"
+          tabIndex={0}
+        >
+          <div className="absolute inset-0 bg-brand-lime/5 opacity-50"></div>
+          <div className="relative z-10">
+            <div className="flex justify-between items-start mb-4">
+              <div className="w-10 h-10 rounded-full bg-white border border-brand-lime/20 flex items-center justify-center text-brand-deep">
+                <Target size={20} strokeWidth={2} />
+              </div>
+              <span className="text-[10px] font-bold text-brand-deep bg-brand-lime/20 px-2 py-0.5 rounded-full">
+                CONFIGURAR
+              </span>
+            </div>
+            <div>
+              <p className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">Metas & Orçamentos</p>
+              <p className="text-sm text-slate-600 font-medium leading-relaxed">
+                Você ainda não definiu metas. Toque para configurar no Planejamento.
+              </p>
+            </div>
+          </div>
+        </div>
 
       </div>
 
