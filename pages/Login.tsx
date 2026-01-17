@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Phone, Send } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail, Phone, Send } from 'lucide-react';
 import AuthShell from './AuthShell';
 import { useToast } from '../components/Toast';
 import { getSupabaseClient } from '../services/supabaseClient';
@@ -20,10 +20,12 @@ const Login: React.FC = () => {
 
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const normalizedPhone = useMemo(() => normalizePhoneE164Like(phone), [phone]);
-  const canSubmit = Boolean(email.trim()) && Boolean(normalizedPhone) && !isSubmitting;
+  const canSubmit = Boolean(email.trim()) && Boolean(password) && Boolean(normalizedPhone) && !isSubmitting;
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,26 +37,26 @@ const Login: React.FC = () => {
       addToast('Informe seu telefone no formato +55… (E.164).', 'ERROR');
       return;
     }
+    if (!password) {
+      addToast('Informe sua senha.', 'ERROR');
+      return;
+    }
 
     setIsSubmitting(true);
     try {
       setExpectedPhoneForNextAuth(normalizedPhone);
 
-      const { error } = await supabase.auth.signInWithOtp({
+      const { error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
-        options: {
-          shouldCreateUser: false,
-          emailRedirectTo: window.location.origin,
-        },
+        password,
       });
 
       if (error) {
-        addToast('Não consegui enviar o login. Confere seu e-mail?', 'ERROR');
+        addToast('Não consegui entrar. Verifique seus dados.', 'ERROR');
         return;
       }
 
-      addToast('Enviei um link de acesso no seu e-mail.', 'SUCCESS');
-      addToast('Abra o link no mesmo dispositivo/navegador para entrar.', 'INFO');
+      addToast('Bem-vindo(a)!', 'SUCCESS');
       navigate('/', { replace: true });
     } finally {
       setIsSubmitting(false);
@@ -64,7 +66,7 @@ const Login: React.FC = () => {
   return (
     <AuthShell
       title="Entrar"
-      subtitle="Use o mesmo e-mail e telefone que você usa para registrar via WhatsApp. Vou te mandar um link seguro no e-mail."
+      subtitle="Entre com e-mail e senha. O telefone valida que este acesso é o mesmo do seu WhatsApp."
       showBack={false}
     >
       <form onSubmit={submit} className="space-y-4">
@@ -80,6 +82,29 @@ const Login: React.FC = () => {
               placeholder="seuemail@exemplo.com"
               className="w-full outline-none text-sm font-semibold text-slate-800 placeholder:text-slate-400"
             />
+          </div>
+        </label>
+
+        <label className="block">
+          <span className="text-xs font-semibold text-slate-600">Senha</span>
+          <div className="mt-2 flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3.5 shadow-sm focus-within:border-brand-lime/60 focus-within:ring-4 focus-within:ring-brand-lime/10">
+            <Lock size={18} className="text-slate-400" />
+            <input
+              value={password}
+              onChange={(ev) => setPassword(ev.target.value)}
+              type={showPassword ? 'text' : 'password'}
+              autoComplete="current-password"
+              placeholder="Sua senha"
+              className="w-full outline-none text-sm font-semibold text-slate-800 placeholder:text-slate-400"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              className="text-slate-400 hover:text-slate-600"
+              aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+            >
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
           </div>
         </label>
 
@@ -107,7 +132,7 @@ const Login: React.FC = () => {
           className="w-full flex items-center justify-center gap-3 rounded-2xl bg-brand-deep text-white font-bold py-4 shadow-float border border-white/10 disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-premium transition-all active:scale-[0.99]"
         >
           <Send size={18} />
-          {isSubmitting ? 'Enviando…' : 'Enviar link de acesso'}
+          {isSubmitting ? 'Entrando…' : 'Entrar'}
         </button>
 
         <div className="pt-2">
@@ -116,9 +141,6 @@ const Login: React.FC = () => {
             <Link to="/signup" className="font-bold text-brand-deep hover:underline">
               Criar agora
             </Link>
-          </p>
-          <p className="text-[11px] text-slate-400 mt-2 leading-relaxed">
-            Se o link abrir e você não entrar, normalmente é porque o telefone não confere com o cadastro.
           </p>
         </div>
 

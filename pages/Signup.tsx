@@ -1,10 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight, Mail, Phone, User } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff, Mail, Phone, User } from 'lucide-react';
 import AuthShell from './AuthShell';
 import { useToast } from '../components/Toast';
 import { getSupabaseClient } from '../services/supabaseClient';
-import { setExpectedPhoneForNextAuth } from '../services/AuthContext';
 
 function normalizePhoneE164Like(input: string): string | null {
   const cleaned = (input ?? '').toString().trim().replace(/[^0-9+]/g, '');
@@ -24,6 +23,9 @@ const Signup: React.FC = () => {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const normalizedPhone = useMemo(() => normalizePhoneE164Like(phone), [phone]);
@@ -54,16 +56,22 @@ const Signup: React.FC = () => {
       addToast('Informe seu e-mail para eu te enviar o acesso.', 'ERROR');
       return;
     }
+    if (password.length < 8) {
+      addToast('Sua senha precisa ter pelo menos 8 caracteres.', 'ERROR');
+      return;
+    }
+    if (password !== confirmPassword) {
+      addToast('As senhas não conferem.', 'ERROR');
+      return;
+    }
 
     setIsSubmitting(true);
     try {
-      setExpectedPhoneForNextAuth(normalizedPhone);
-
-      const { error } = await supabase.auth.signInWithOtp({
+      // Criação de conta: email + senha (telefone fica no metadata para o trigger de provisionamento criar org)
+      const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
+        password,
         options: {
-          shouldCreateUser: true,
-          emailRedirectTo: window.location.origin,
           data: {
             name: name.trim(),
             phone_e164: normalizedPhone,
@@ -72,13 +80,18 @@ const Signup: React.FC = () => {
       });
 
       if (error) {
-        addToast('Não consegui criar seu acesso. Tente novamente.', 'ERROR');
+        addToast('Não consegui criar sua conta. Verifique os dados e tente de novo.', 'ERROR');
         return;
       }
 
-      addToast('Pronto! Te enviei um link de acesso por e-mail.', 'SUCCESS');
-      addToast('Abra o link para finalizar. Depois, é só usar o WhatsApp pra lançar.', 'INFO');
-      navigate('/', { replace: true });
+      // Se o projeto exigir confirmação de e-mail, pode não vir sessão aqui.
+      if (data.session) {
+        addToast('Conta criada! Bem-vindo(a).', 'SUCCESS');
+        navigate('/', { replace: true });
+      } else {
+        addToast('Conta criada! Agora confirme seu e-mail para entrar.', 'SUCCESS');
+        navigate('/login', { replace: true });
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -87,7 +100,7 @@ const Signup: React.FC = () => {
   return (
     <AuthShell
       title="Criar conta"
-      subtitle="Primeiro confirmo seus dados principais. Depois te mando um link seguro por e-mail."
+      subtitle="Crie sua conta com e-mail e senha. O telefone é o que conecta seu WhatsApp à sua organização."
     >
       <form onSubmit={submit} className="space-y-4">
         {step === 1 && (
@@ -164,9 +177,46 @@ const Signup: React.FC = () => {
                   className="w-full outline-none text-sm font-semibold text-slate-800 placeholder:text-slate-400"
                 />
               </div>
+            </label>
+
+            <label className="block">
+              <span className="text-xs font-semibold text-slate-600">Senha</span>
+              <div className="mt-2 flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3.5 shadow-sm focus-within:border-brand-lime/60 focus-within:ring-4 focus-within:ring-brand-lime/10">
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="text-slate-400 hover:text-slate-600"
+                  aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+                <input
+                  value={password}
+                  onChange={(ev) => setPassword(ev.target.value)}
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  placeholder="Mínimo de 8 caracteres"
+                  className="w-full outline-none text-sm font-semibold text-slate-800 placeholder:text-slate-400"
+                />
+              </div>
               <p className="mt-2 text-[11px] text-slate-500 leading-relaxed">
-                Eu vou te mandar um link seguro aqui (sem senha).
+                Dica: use uma senha que você lembra. Você vai usar para entrar no app.
               </p>
+            </label>
+
+            <label className="block">
+              <span className="text-xs font-semibold text-slate-600">Confirmar senha</span>
+              <div className="mt-2 flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3.5 shadow-sm focus-within:border-brand-lime/60 focus-within:ring-4 focus-within:ring-brand-lime/10">
+                <Eye size={18} className="text-slate-300" />
+                <input
+                  value={confirmPassword}
+                  onChange={(ev) => setConfirmPassword(ev.target.value)}
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  placeholder="Repita a senha"
+                  className="w-full outline-none text-sm font-semibold text-slate-800 placeholder:text-slate-400"
+                />
+              </div>
             </label>
 
             <button
@@ -174,7 +224,7 @@ const Signup: React.FC = () => {
               disabled={isSubmitting}
               className="w-full flex items-center justify-center gap-3 rounded-2xl bg-brand-deep text-white font-bold py-4 shadow-float border border-white/10 disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-premium transition-all active:scale-[0.99]"
             >
-              {isSubmitting ? 'Enviando…' : 'Enviar link de acesso'}
+              {isSubmitting ? 'Criando…' : 'Criar conta'}
               <ArrowRight size={18} />
             </button>
 
