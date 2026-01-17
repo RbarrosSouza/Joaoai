@@ -17,6 +17,21 @@ function readSupabaseEnv(): SupabaseEnv {
   };
 }
 
+export function getSupabaseEnvStatus(): {
+  isConfigured: boolean;
+  missing: Array<'VITE_SUPABASE_URL' | 'VITE_SUPABASE_PUBLISHABLE_KEY_OR_VITE_SUPABASE_ANON_KEY'>;
+} {
+  const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+  const publishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
+  const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+
+  const missing: Array<'VITE_SUPABASE_URL' | 'VITE_SUPABASE_PUBLISHABLE_KEY_OR_VITE_SUPABASE_ANON_KEY'> = [];
+  if (!url) missing.push('VITE_SUPABASE_URL');
+  if (!publishableKey && !anonKey) missing.push('VITE_SUPABASE_PUBLISHABLE_KEY_OR_VITE_SUPABASE_ANON_KEY');
+
+  return { isConfigured: missing.length === 0, missing };
+}
+
 let cached: SupabaseClient | null | undefined;
 
 /**

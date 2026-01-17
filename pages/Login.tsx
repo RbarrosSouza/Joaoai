@@ -1,40 +1,27 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Lock, Mail, Phone, Send } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail, Send } from 'lucide-react';
 import AuthShell from './AuthShell';
 import { useToast } from '../components/Toast';
-import { getSupabaseClient } from '../services/supabaseClient';
-import { setExpectedPhoneForNextAuth } from '../services/AuthContext';
-
-function normalizePhoneE164Like(input: string): string | null {
-  const cleaned = (input ?? '').toString().trim().replace(/[^0-9+]/g, '');
-  const normalized = /^\d{8,15}$/.test(cleaned) ? `+${cleaned}` : cleaned;
-  if (!/^\+[1-9][0-9]{7,14}$/.test(normalized)) return null;
-  return normalized;
-}
+import { getSupabaseClient, getSupabaseEnvStatus } from '../services/supabaseClient';
 
 const Login: React.FC = () => {
   const { addToast } = useToast();
   const navigate = useNavigate();
   const supabase = getSupabaseClient();
+  const supabaseStatus = getSupabaseEnvStatus();
 
   const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const normalizedPhone = useMemo(() => normalizePhoneE164Like(phone), [phone]);
-  const canSubmit = Boolean(email.trim()) && Boolean(password) && Boolean(normalizedPhone) && !isSubmitting;
+  const canSubmit = Boolean(email.trim()) && Boolean(password) && !isSubmitting;
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!supabase) {
       addToast('Supabase não está configurado neste ambiente.', 'ERROR');
-      return;
-    }
-    if (!normalizedPhone) {
-      addToast('Informe seu telefone no formato +55… (E.164).', 'ERROR');
       return;
     }
     if (!password) {
@@ -44,8 +31,6 @@ const Login: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      setExpectedPhoneForNextAuth(normalizedPhone);
-
       const { error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password,
@@ -66,7 +51,7 @@ const Login: React.FC = () => {
   return (
     <AuthShell
       title="Entrar"
-      subtitle="Entre com e-mail e senha. O telefone valida que este acesso é o mesmo do seu WhatsApp."
+      subtitle="Entre com e-mail e senha."
       showBack={false}
     >
       <form onSubmit={submit} className="space-y-4">
@@ -108,24 +93,6 @@ const Login: React.FC = () => {
           </div>
         </label>
 
-        <label className="block">
-          <span className="text-xs font-semibold text-slate-600">Telefone (WhatsApp)</span>
-          <div className="mt-2 flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3.5 shadow-sm focus-within:border-brand-lime/60 focus-within:ring-4 focus-within:ring-brand-lime/10">
-            <Phone size={18} className="text-slate-400" />
-            <input
-              value={phone}
-              onChange={(ev) => setPhone(ev.target.value)}
-              inputMode="tel"
-              autoComplete="tel"
-              placeholder="+5511999999999"
-              className="w-full outline-none text-sm font-semibold text-slate-800 placeholder:text-slate-400"
-            />
-          </div>
-          <p className="mt-2 text-[11px] text-slate-500 leading-relaxed">
-            Dica: use sempre com código do país, ex: <span className="font-semibold text-slate-700">+55</span>.
-          </p>
-        </label>
-
         <button
           type="submit"
           disabled={!canSubmit}
@@ -145,9 +112,16 @@ const Login: React.FC = () => {
         </div>
 
         {!supabase && (
-          <div className="mt-2 p-4 rounded-2xl border border-red-200 bg-white text-red-600 text-sm font-semibold">
-            Supabase não configurado: defina <span className="font-bold">VITE_SUPABASE_URL</span> e{' '}
-            <span className="font-bold">VITE_SUPABASE_PUBLISHABLE_KEY</span>.
+          <div className="mt-2 p-4 rounded-2xl border border-red-200 bg-white text-red-600 text-sm font-semibold leading-relaxed">
+            Supabase não configurado neste ambiente.
+            <div className="mt-2 text-[12px] text-red-600/90 font-medium">
+              Faltando: {supabaseStatus.missing.join(', ')}.
+            </div>
+            <div className="mt-2 text-[11px] text-slate-500">
+              Se você está rodando local (ex.: <span className="font-semibold">192.168…</span>), as envs da Vercel não aplicam — crie um{' '}
+              <span className="font-semibold">.env.local</span> com <span className="font-semibold">VITE_SUPABASE_URL</span> e{' '}
+              <span className="font-semibold">VITE_SUPABASE_PUBLISHABLE_KEY</span>.
+            </div>
           </div>
         )}
       </form>
