@@ -5,6 +5,7 @@ import { TransactionType, TransactionFrequency, Transaction } from '../types';
 import { getIcon } from '../constants';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from './Toast';
+import { uuidv4 } from '../utils/uuid';
 
 interface TransactionModalProps {
   onClose: () => void;
@@ -175,11 +176,11 @@ const TransactionModal: React.FC<TransactionModalProps> = ({ onClose, editingTra
 
     // IF CREATING NEW
     const transactionsToCreate: Transaction[] = [];
-    const groupId = Date.now().toString();
+    const groupId = uuidv4();
 
     if (frequency === 'SINGLE') {
         transactionsToCreate.push({
-            id: Date.now().toString(),
+            id: uuidv4(),
             amount: baseAmount,
             description,
             date: new Date(isPaid ? paymentDate : dueDate).toISOString(), 
@@ -200,7 +201,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({ onClose, editingTra
             installmentDueDate.setMonth(installmentDueDate.getMonth() + i); 
             
             transactionsToCreate.push({
-                id: `${groupId}-${i}`,
+                id: uuidv4(),
                 amount: parseFloat(installmentValue.toFixed(2)),
                 description: `${description} (${i + 1}/${totalInstallments})`,
                 date: installmentDueDate.toISOString(),
@@ -225,7 +226,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({ onClose, editingTra
             recurringDate.setMonth(recurringDate.getMonth() + i);
 
             transactionsToCreate.push({
-                id: `${groupId}-${i}`,
+                id: uuidv4(),
                 amount: baseAmount,
                 description: i === 0 ? description : `${description} (Recorrente)`,
                 date: recurringDate.toISOString(),

@@ -5,7 +5,8 @@ import { useToast } from '../components/Toast';
 import { useAuth } from './AuthContext';
 import { buildDefaultCategories, buildDefaultUserSettings, type UserSettings } from './financeDefaults';
 import { readUserSettings, writeUserSettings } from './financeStorage';
-import { readUserTransactions, writeUserTransactions } from './financeTransactionsStorage';
+import { getSupabaseClient } from './supabaseClient';
+import { deleteTransaction as deleteTransactionRemote, fetchActiveOrgId, fetchTransactions, upsertTransactions } from './financeTransactionsSupabase';
 
 function getAuthDisplayName(user: any): string {
   const md = (user?.user_metadata ?? {}) as Record<string, unknown>;
@@ -70,11 +71,13 @@ export const FinanceProvider: React.FC<{ children: ReactNode }> = ({ children })
   const { addToast } = useToast();
   const { user } = useAuth();
   const userId = user?.id ?? 'anonymous';
+  const supabase = getSupabaseClient();
+  const [activeOrgId, setActiveOrgId] = useState<string | null>(null);
   
   // Novo usuário deve iniciar sempre vazio.
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [cards, setCards] = useState<CreditCard[]>([]);
-  const [transactions, setTransactions] = useState<Transaction[]>(() => readUserTransactions({ userId, fallback: [] }));
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>(() => buildDefaultCategories(CATEGORIES));
   
   // User Profile & Settings State (with Persistence)
@@ -91,16 +94,34 @@ export const FinanceProvider: React.FC<{ children: ReactNode }> = ({ children })
     writeUserSettings({ userId, settings: userSettings });
   }, [userId, userSettings]);
 
-  // Load & persist Transactions (Local first). Isso resolve "sumir ao recarregar".
   useEffect(() => {
-    // Ao trocar de usuário (login/logout), recarrega os dados corretos.
-    setTransactions(readUserTransactions({ userId, fallback: [] }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId]);
-
-  useEffect(() => {
-    writeUserTransactions({ userId, transactions });
-  }, [transactions, userId]);
+    let cancelled = false;
+    async function loadFromSupabase() {
+      if (!supabase || !user?.id) {
+        setActiveOrgId(null);
+        setTransactions([]);
+        return;
+      }
+      try {
+        const orgId = await fetchActiveOrgId({ supabase, userId: user.id });
+        if (cancelled) return;
+        setActiveOrgId(orgId);
+        if (!orgId) {
+          setTransactions([]);
+          return;
+        }
+        const txs = await fetchTransactions({ supabase, orgId });
+        if (cancelled) return;
+        setTransactions(txs);
+      } catch (err) {
+        if (!cancelled) addToast('Não consegui carregar seus lançamentos do Supabase.', 'ERROR');
+      }
+    }
+    void loadFromSupabase();
+    return () => {
+      cancelled = true;
+    };
+  }, [addToast, supabase, user?.id]);
 
   // Mantém nome/e-mail coerentes com o cadastro (sem sobrescrever se o usuário personalizou depois).
   useEffect(() => {
@@ -197,6 +218,17 @@ export const FinanceProvider: React.FC<{ children: ReactNode }> = ({ children })
     // Apply impact for each new transaction
     processedTransactions.forEach(t => applyTransactionImpact(t));
 
+    // Persistência via Supabase
+    if (supabase && user?.id && activeOrgId) {
+      void upsertTransactions({ supabase, orgId: activeOrgId, userId: user.id, transactions: processedTransactions }).catch(() => {
+        addToast('Não consegui salvar seus lançamentos no Supabase. Tente novamente.', 'ERROR');
+      });
+    } else if (user?.id) {
+      addToast('Supabase não configurado para salvar lançamentos. Verifique a conexão.', 'ERROR');
+    } else {
+      addToast('Faça login para salvar seus lançamentos definitivamente.', 'INFO');
+    }
+
     if (newTransactions.length === 1) {
         addToast('Lançamento adicionado com sucesso!');
     } else {
@@ -205,6 +237,7 @@ export const FinanceProvider: React.FC<{ children: ReactNode }> = ({ children })
   };
 
   const updateTransaction = (id: string, updates: Partial<Transaction>) => {
+    let updatedForRemote: Transaction | null = null;
     setTransactions(prev => {
         const oldTransaction = prev.find(t => t.id === id);
         if (!oldTransaction) return prev;
@@ -214,6 +247,7 @@ export const FinanceProvider: React.FC<{ children: ReactNode }> = ({ children })
 
         // 2. Create new transaction object
         const newTransaction = { ...oldTransaction, ...updates };
+        updatedForRemote = newTransaction;
 
         // 3. Apply impact of new transaction
         applyTransactionImpact(newTransaction, false);
@@ -221,6 +255,14 @@ export const FinanceProvider: React.FC<{ children: ReactNode }> = ({ children })
         return prev.map(t => t.id === id ? newTransaction : t);
     });
     addToast('Lançamento atualizado.');
+
+    if (supabase && user?.id && activeOrgId) {
+      if (updatedForRemote) {
+        void upsertTransactions({ supabase, orgId: activeOrgId, userId: user.id, transactions: [updatedForRemote] }).catch(() => {
+          addToast('Não consegui salvar a atualização no Supabase.', 'ERROR');
+        });
+      }
+    }
   };
 
   const deleteTransaction = (id: string) => {
@@ -231,6 +273,12 @@ export const FinanceProvider: React.FC<{ children: ReactNode }> = ({ children })
         
         setTransactions(prev => prev.filter(t => t.id !== id));
         addToast('Lançamento excluído.', 'INFO');
+    }
+
+    if (supabase && user?.id && activeOrgId) {
+      void deleteTransactionRemote({ supabase, orgId: activeOrgId, id }).catch(() => {
+        addToast('Não consegui excluir o lançamento no Supabase.', 'ERROR');
+      });
     }
   };
 
