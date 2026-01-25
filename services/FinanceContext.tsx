@@ -5,6 +5,7 @@ import { useToast } from '../components/Toast';
 import { useAuth } from './AuthContext';
 import { buildDefaultCategories, buildDefaultUserSettings, type UserSettings } from './financeDefaults';
 import { readUserSettings, writeUserSettings } from './financeStorage';
+import { readUserTransactions, writeUserTransactions } from './financeTransactionsStorage';
 
 function getAuthDisplayName(user: any): string {
   const md = (user?.user_metadata ?? {}) as Record<string, unknown>;
@@ -73,7 +74,7 @@ export const FinanceProvider: React.FC<{ children: ReactNode }> = ({ children })
   // Novo usuário deve iniciar sempre vazio.
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [cards, setCards] = useState<CreditCard[]>([]);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>(() => readUserTransactions({ userId, fallback: [] }));
   const [categories, setCategories] = useState<Category[]>(() => buildDefaultCategories(CATEGORIES));
   
   // User Profile & Settings State (with Persistence)
@@ -89,6 +90,17 @@ export const FinanceProvider: React.FC<{ children: ReactNode }> = ({ children })
   useEffect(() => {
     writeUserSettings({ userId, settings: userSettings });
   }, [userId, userSettings]);
+
+  // Load & persist Transactions (Local first). Isso resolve "sumir ao recarregar".
+  useEffect(() => {
+    // Ao trocar de usuário (login/logout), recarrega os dados corretos.
+    setTransactions(readUserTransactions({ userId, fallback: [] }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
+
+  useEffect(() => {
+    writeUserTransactions({ userId, transactions });
+  }, [transactions, userId]);
 
   // Mantém nome/e-mail coerentes com o cadastro (sem sobrescrever se o usuário personalizou depois).
   useEffect(() => {
