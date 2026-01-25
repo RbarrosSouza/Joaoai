@@ -3,6 +3,7 @@ import { X, Check, Landmark, Wallet, PiggyBank, TrendingUp, Building2 } from 'lu
 import { useFinance } from '../services/FinanceContext';
 import { Account, AccountType } from '../types';
 import { BANK_PRESETS } from '../constants';
+import { uuidv4 } from '../utils/uuid';
 
 interface AccountFormModalProps {
   onClose: () => void;
@@ -61,7 +62,7 @@ const AccountFormModal: React.FC<AccountFormModalProps> = ({ onClose, editingAcc
     if (editingAccount) {
       updateAccount(editingAccount.id, accountData);
     } else {
-      addAccount({ ...accountData, id: `acc_${Date.now()}` } as Account);
+      addAccount({ ...accountData, id: uuidv4() } as Account);
     }
     onClose();
   };

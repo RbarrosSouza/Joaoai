@@ -7,6 +7,7 @@ import { buildDefaultCategories, buildDefaultUserSettings, type UserSettings } f
 import { readUserSettings, writeUserSettings } from './financeStorage';
 import { getSupabaseClient } from './supabaseClient';
 import { deleteTransaction as deleteTransactionRemote, fetchActiveOrgId, fetchTransactions, upsertTransactions } from './financeTransactionsSupabase';
+import { deleteAccount as deleteAccountRemote, deleteCard as deleteCardRemote, fetchAccounts, fetchCards, upsertAccount, upsertCard } from './financeEntitiesSupabase';
 
 function getAuthDisplayName(user: any): string {
   const md = (user?.user_metadata ?? {}) as Record<string, unknown>;
@@ -99,6 +100,8 @@ export const FinanceProvider: React.FC<{ children: ReactNode }> = ({ children })
     async function loadFromSupabase() {
       if (!supabase || !user?.id) {
         setActiveOrgId(null);
+        setAccounts([]);
+        setCards([]);
         setTransactions([]);
         return;
       }
@@ -107,12 +110,20 @@ export const FinanceProvider: React.FC<{ children: ReactNode }> = ({ children })
         if (cancelled) return;
         setActiveOrgId(orgId);
         if (!orgId) {
+          setAccounts([]);
+          setCards([]);
           setTransactions([]);
           return;
         }
-        const txs = await fetchTransactions({ supabase, orgId });
+        const [txs, accs, cds] = await Promise.all([
+          fetchTransactions({ supabase, orgId }),
+          fetchAccounts({ supabase, orgId }),
+          fetchCards({ supabase, orgId }),
+        ]);
         if (cancelled) return;
         setTransactions(txs);
+        setAccounts(accs);
+        setCards(cds);
       } catch (err) {
         if (!cancelled) addToast('Não consegui carregar seus lançamentos do Supabase.', 'ERROR');
       }
@@ -303,32 +314,82 @@ export const FinanceProvider: React.FC<{ children: ReactNode }> = ({ children })
   const addAccount = (account: Account) => {
     setAccounts(prev => [...prev, account]);
     addToast('Conta bancária adicionada!');
+
+    if (supabase && user?.id && activeOrgId) {
+      void upsertAccount({ supabase, orgId: activeOrgId, account }).catch(() => {
+        addToast('Não consegui salvar a conta no Supabase.', 'ERROR');
+        setAccounts((prev) => prev.filter((a) => a.id !== account.id));
+      });
+    }
   };
 
   const updateAccount = (id: string, updates: Partial<Account>) => {
-    setAccounts(prev => prev.map(a => a.id === id ? { ...a, ...updates } : a));
+    let updatedForRemote: Account | null = null;
+    setAccounts(prev => prev.map(a => {
+      if (a.id !== id) return a;
+      const next = { ...a, ...updates };
+      updatedForRemote = next;
+      return next;
+    }));
     addToast('Conta atualizada com sucesso!');
+
+    if (supabase && user?.id && activeOrgId && updatedForRemote) {
+      void upsertAccount({ supabase, orgId: activeOrgId, account: updatedForRemote }).catch(() => {
+        addToast('Não consegui salvar a atualização da conta no Supabase.', 'ERROR');
+      });
+    }
   };
 
   const deleteAccount = (id: string) => {
     setAccounts(prev => prev.filter(a => a.id !== id));
     addToast('Conta removida.', 'INFO');
+
+    if (supabase && user?.id && activeOrgId) {
+      void deleteAccountRemote({ supabase, orgId: activeOrgId, id }).catch(() => {
+        addToast('Não consegui excluir a conta no Supabase.', 'ERROR');
+      });
+    }
   };
 
   // --- Cards CRUD ---
   const addCard = (card: CreditCard) => {
     setCards(prev => [...prev, card]);
     addToast('Cartão adicionado com sucesso!');
+
+    if (supabase && user?.id && activeOrgId) {
+      void upsertCard({ supabase, orgId: activeOrgId, card }).catch(() => {
+        addToast('Não consegui salvar o cartão no Supabase.', 'ERROR');
+        setCards((prev) => prev.filter((c) => c.id !== card.id));
+      });
+    }
   };
 
   const updateCard = (id: string, updates: Partial<CreditCard>) => {
-    setCards(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c));
+    let updatedForRemote: CreditCard | null = null;
+    setCards(prev => prev.map(c => {
+      if (c.id !== id) return c;
+      const next = { ...c, ...updates };
+      updatedForRemote = next;
+      return next;
+    }));
     addToast('Cartão atualizado!');
+
+    if (supabase && user?.id && activeOrgId && updatedForRemote) {
+      void upsertCard({ supabase, orgId: activeOrgId, card: updatedForRemote }).catch(() => {
+        addToast('Não consegui salvar a atualização do cartão no Supabase.', 'ERROR');
+      });
+    }
   };
 
   const deleteCard = (id: string) => {
     setCards(prev => prev.filter(c => c.id !== id));
     addToast('Cartão removido.', 'INFO');
+
+    if (supabase && user?.id && activeOrgId) {
+      void deleteCardRemote({ supabase, orgId: activeOrgId, id }).catch(() => {
+        addToast('Não consegui excluir o cartão no Supabase.', 'ERROR');
+      });
+    }
   };
 
   // --- Category Actions ---

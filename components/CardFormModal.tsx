@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Check, CreditCard, Calendar, ShieldCheck, Wifi } from 'lucide-react';
 import { useFinance } from '../services/FinanceContext';
 import { CreditCard as CreditCardType } from '../types';
+import { uuidv4 } from '../utils/uuid';
 
 interface CardFormModalProps {
   onClose: () => void;
@@ -57,7 +58,7 @@ const CardFormModal: React.FC<CardFormModalProps> = ({ onClose, editingCard }) =
     if (editingCard) {
       updateCard(editingCard.id, cardData);
     } else {
-      addCard({ ...cardData, id: `card_${Date.now()}` } as CreditCardType);
+      addCard({ ...cardData, id: uuidv4() } as CreditCardType);
     }
     onClose();
   };

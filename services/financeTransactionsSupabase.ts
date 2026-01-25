@@ -11,6 +11,7 @@ type AppTransactionRow = {
 };
 
 export async function fetchActiveOrgId(params: { supabase: SupabaseClient; userId: string }): Promise<string | null> {
+  // 1) Tenta via profiles (principal)
   const { data, error } = await params.supabase
     .from('profiles')
     .select('active_org_id')
@@ -18,7 +19,18 @@ export async function fetchActiveOrgId(params: { supabase: SupabaseClient; userI
     .maybeSingle();
 
   if (error) throw error;
-  return (data?.active_org_id as string | null) ?? null;
+  const orgId = (data?.active_org_id as string | null) ?? null;
+  if (orgId) return orgId;
+
+  // 2) Fallback: membership direto (útil quando active_org_id ainda não foi setado)
+  const membership = await params.supabase
+    .from('organization_members')
+    .select('org_id')
+    .eq('user_id', params.userId)
+    .maybeSingle();
+
+  if (membership.error) throw membership.error;
+  return (membership.data?.org_id as string | null) ?? null;
 }
 
 export async function fetchTransactions(params: {
