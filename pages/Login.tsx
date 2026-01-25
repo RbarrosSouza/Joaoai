@@ -136,7 +136,7 @@ const Login: React.FC = () => {
             <div className="mt-2 text-[11px] text-slate-500">
               Se você está rodando local (ex.: <span className="font-semibold">192.168…</span>), as envs da Vercel não aplicam — crie um{' '}
               <span className="font-semibold">.env.local</span> com <span className="font-semibold">VITE_SUPABASE_URL</span> e{' '}
-              <span className="font-semibold">VITE_SUPABASE_PUBLISHABLE_KEY</span>.
+              <span className="font-semibold">VITE_SUPABASE_ANON_KEY</span> (recomendado) ou <span className="font-semibold">VITE_SUPABASE_PUBLISHABLE_KEY</span>.
             </div>
           </div>
         )}

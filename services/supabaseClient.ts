@@ -19,7 +19,9 @@ function readSupabaseEnv(): SupabaseEnv {
 
   return {
     url,
-    key: publishableKey || anonKey,
+    // Preferimos ANON (JWT) porque o PostgREST exige JWT válido.
+    // Publishable key pode funcionar para Auth, mas não garante acesso ao REST (/rest/v1) em todos os ambientes.
+    key: anonKey || publishableKey,
   };
 }
 
@@ -84,6 +86,12 @@ function validateSupabaseEnv({ url, key }: SupabaseEnv): SupabaseEnvStatus {
         `Mismatch: a chave anon parece ser do projeto "${ref}", mas a URL aponta para "${urlRef}". Confira as envs na Vercel.`,
       );
     }
+  }
+  // Se a key NÃO for JWT (ex.: publishable), alertamos que o REST pode não aceitar.
+  if (trimmedKey.split('.').length < 2) {
+    issues.push(
+      'A chave configurada não parece ser JWT (anon). Para acessar o banco via /rest/v1, configure também VITE_SUPABASE_ANON_KEY.',
+    );
   }
 
   return { isConfigured: issues.length === 0, missing, issues };
