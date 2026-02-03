@@ -5,6 +5,7 @@ import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer, CartesianGrid, Pi
 import { getIcon } from '../constants';
 import { TransactionType, AccountType } from '../types';
 import { useNavigate } from 'react-router-dom';
+import { parseLocalDateString, isoToLocalDateString } from '../utils/dateUtils';
 
 const Dashboard: React.FC = () => {
   const { accounts, cards, totalBalance, getMonthlyStats, transactions, isPrivacyMode, togglePrivacyMode, userSettings } = useFinance();
@@ -43,7 +44,7 @@ const Dashboard: React.FC = () => {
     // Group current month expenses by category
     const currentMonthExpenses: Record<string, number> = {};
     transactions.forEach(t => {
-      const d = new Date(t.date);
+      const d = parseLocalDateString(isoToLocalDateString(t.date));
       if (t.type === TransactionType.EXPENSE && !t.isPending && d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
         currentMonthExpenses[t.categoryId] = (currentMonthExpenses[t.categoryId] || 0) + t.amount;
       }
@@ -118,7 +119,11 @@ const Dashboard: React.FC = () => {
   const overdueTransactions = useMemo(() => {
     const today = new Date();
     today.setHours(0,0,0,0);
-    return transactions.filter(t => t.isPending && t.type === TransactionType.EXPENSE && new Date(t.date) < today);
+    return transactions.filter(t => {
+      const tDate = parseLocalDateString(isoToLocalDateString(t.date));
+      tDate.setHours(0,0,0,0);
+      return t.isPending && t.type === TransactionType.EXPENSE && tDate < today;
+    });
   }, [transactions]);
 
   const overdueAmount = overdueTransactions.reduce((acc, t) => acc + t.amount, 0);
@@ -190,7 +195,7 @@ const Dashboard: React.FC = () => {
     const byKey = new Map(buckets.map((b) => [b.key, b]));
     transactions.forEach((t) => {
       if (t.isPending) return; // só realizado
-      const d = new Date(t.paymentDate || t.date);
+      const d = parseLocalDateString(isoToLocalDateString(t.paymentDate || t.date));
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
       const bucket = byKey.get(key);
       if (!bucket) return;

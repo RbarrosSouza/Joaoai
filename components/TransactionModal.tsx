@@ -6,6 +6,7 @@ import { getIcon } from '../constants';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from './Toast';
 import { uuidv4 } from '../utils/uuid';
+import { getTodayString, toLocalDateString, isoToLocalDateString, dateStringToLocalISO, parseLocalDateString } from '../utils/dateUtils';
 
 interface TransactionModalProps {
   onClose: () => void;
@@ -24,8 +25,8 @@ const TransactionModal: React.FC<TransactionModalProps> = ({ onClose, editingTra
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   
-  const [dueDate, setDueDate] = useState(new Date().toISOString().split('T')[0]); 
-  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
+  const [dueDate, setDueDate] = useState(getTodayString()); 
+  const [paymentDate, setPaymentDate] = useState(getTodayString());
   const [isPaid, setIsPaid] = useState(false);
   
   const [frequency, setFrequency] = useState<TransactionFrequency>('SINGLE');
@@ -64,10 +65,10 @@ const TransactionModal: React.FC<TransactionModalProps> = ({ onClose, editingTra
         setAmount(editingTransaction.amount.toString());
         setDescription(editingTransaction.description);
         
-        const safeDate = editingTransaction.date ? new Date(editingTransaction.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+        const safeDate = editingTransaction.date ? isoToLocalDateString(editingTransaction.date) : getTodayString();
         setDueDate(safeDate);
         
-        const safePayment = editingTransaction.paymentDate ? new Date(editingTransaction.paymentDate).toISOString().split('T')[0] : safeDate;
+        const safePayment = editingTransaction.paymentDate ? isoToLocalDateString(editingTransaction.paymentDate) : safeDate;
         setPaymentDate(safePayment);
         
         setIsPaid(!editingTransaction.isPending);
@@ -103,9 +104,9 @@ const TransactionModal: React.FC<TransactionModalProps> = ({ onClose, editingTra
               // Set to Due Day
               targetDate.setDate(card.dueDay);
               
-              setDueDate(targetDate.toISOString().split('T')[0]);
+              setDueDate(toLocalDateString(targetDate));
               // Also update payment date to match, assuming future payment
-              setPaymentDate(targetDate.toISOString().split('T')[0]);
+              setPaymentDate(toLocalDateString(targetDate));
               // Credit card purchases are usually "Pending" payment until bill is paid
               setIsPaid(false);
           }
@@ -160,8 +161,8 @@ const TransactionModal: React.FC<TransactionModalProps> = ({ onClose, editingTra
         const updates: Partial<Transaction> = {
             amount: baseAmount,
             description,
-            date: new Date(isPaid ? paymentDate : dueDate).toISOString(),
-            paymentDate: isPaid ? new Date(paymentDate).toISOString() : undefined,
+            date: dateStringToLocalISO(isPaid ? paymentDate : dueDate),
+            paymentDate: isPaid ? dateStringToLocalISO(paymentDate) : undefined,
             type,
             categoryId,
             subCategoryId,
@@ -183,8 +184,8 @@ const TransactionModal: React.FC<TransactionModalProps> = ({ onClose, editingTra
             id: uuidv4(),
             amount: baseAmount,
             description,
-            date: new Date(isPaid ? paymentDate : dueDate).toISOString(), 
-            paymentDate: isPaid ? new Date(paymentDate).toISOString() : undefined,
+            date: dateStringToLocalISO(isPaid ? paymentDate : dueDate), 
+            paymentDate: isPaid ? dateStringToLocalISO(paymentDate) : undefined,
             type,
             categoryId,
             subCategoryId,
@@ -197,14 +198,14 @@ const TransactionModal: React.FC<TransactionModalProps> = ({ onClose, editingTra
     else if (frequency === 'INSTALLMENT') {
         const installmentValue = baseAmount / totalInstallments;
         for (let i = 0; i < totalInstallments; i++) {
-            const installmentDueDate = new Date(dueDate);
+            const installmentDueDate = parseLocalDateString(dueDate);
             installmentDueDate.setMonth(installmentDueDate.getMonth() + i); 
             
             transactionsToCreate.push({
                 id: uuidv4(),
                 amount: parseFloat(installmentValue.toFixed(2)),
                 description: `${description} (${i + 1}/${totalInstallments})`,
-                date: installmentDueDate.toISOString(),
+                date: dateStringToLocalISO(toLocalDateString(installmentDueDate)),
                 type,
                 categoryId,
                 subCategoryId,
@@ -222,14 +223,14 @@ const TransactionModal: React.FC<TransactionModalProps> = ({ onClose, editingTra
     } 
     else if (frequency === 'RECURRING') {
         for (let i = 0; i < recurringMonths; i++) {
-            const recurringDate = new Date(dueDate);
+            const recurringDate = parseLocalDateString(dueDate);
             recurringDate.setMonth(recurringDate.getMonth() + i);
 
             transactionsToCreate.push({
                 id: uuidv4(),
                 amount: baseAmount,
                 description: i === 0 ? description : `${description} (Recorrente)`,
-                date: recurringDate.toISOString(),
+                date: dateStringToLocalISO(toLocalDateString(recurringDate)),
                 type,
                 categoryId,
                 subCategoryId,

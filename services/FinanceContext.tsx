@@ -8,6 +8,7 @@ import { readUserSettings, writeUserSettings } from './financeStorage';
 import { getSupabaseClient } from './supabaseClient';
 import { deleteTransaction as deleteTransactionRemote, fetchActiveOrgId, fetchTransactions, upsertTransactions } from './financeTransactionsSupabase';
 import { deleteAccount as deleteAccountRemote, deleteCard as deleteCardRemote, fetchAccounts, fetchCards, upsertAccount, upsertCard } from './financeEntitiesSupabase';
+import { parseLocalDateString, isoToLocalDateString, toLocalDateString, dateStringToLocalISO, getTodayString } from '../utils/dateUtils';
 
 function getAuthDisplayName(user: any): string {
   const md = (user?.user_metadata ?? {}) as Record<string, unknown>;
@@ -203,7 +204,7 @@ export const FinanceProvider: React.FC<{ children: ReactNode }> = ({ children })
         if (t.cardId && t.type === TransactionType.EXPENSE) {
             const card = cards.find(c => c.id === t.cardId);
             if (card) {
-                const transDate = new Date(t.date);
+                const transDate = parseLocalDateString(isoToLocalDateString(t.date));
                 const closingDay = card.closingDay;
                 
                 // If transaction happened AFTER or ON closing day, it goes to next month
@@ -217,7 +218,7 @@ export const FinanceProvider: React.FC<{ children: ReactNode }> = ({ children })
                 
                 return { 
                     ...t, 
-                    paymentDate: billDate.toISOString() 
+                    paymentDate: dateStringToLocalISO(toLocalDateString(billDate))
                 };
             }
         }
@@ -303,7 +304,7 @@ export const FinanceProvider: React.FC<{ children: ReactNode }> = ({ children })
     
     updateTransaction(id, {
         isPending: newStatus,
-        paymentDate: !newStatus ? (transaction.paymentDate || new Date().toISOString()) : undefined
+        paymentDate: !newStatus ? (transaction.paymentDate || dateStringToLocalISO(getTodayString())) : undefined
     });
 
     if (!newStatus) addToast('Transação marcada como paga!');
@@ -464,7 +465,7 @@ export const FinanceProvider: React.FC<{ children: ReactNode }> = ({ children })
     const currentYear = now.getFullYear();
 
     const monthlyTransactions = transactions.filter(t => {
-      const d = new Date(t.date);
+      const d = parseLocalDateString(isoToLocalDateString(t.date));
       return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
     });
 

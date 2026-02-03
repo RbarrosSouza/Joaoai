@@ -3,6 +3,7 @@ import { useCategories, useFinance } from '../services/FinanceContext';
 import { getIcon } from '../constants';
 import { TransactionType } from '../types';
 import { Target, AlertTriangle, Plus, CalendarDays, Wallet, Edit2, ChevronLeft, ChevronRight, X, Check, Repeat, Calendar } from 'lucide-react';
+import { parseLocalDateString, isoToLocalDateString } from '../utils/dateUtils';
 
 const Planning: React.FC = () => {
   const categories = useCategories();
@@ -56,7 +57,7 @@ const Planning: React.FC = () => {
   const getSpentByCategory = (catId: string) => {
     return transactions
       .filter(t => {
-          const tDate = new Date(t.date);
+          const tDate = parseLocalDateString(isoToLocalDateString(t.date));
           return t.categoryId === catId && 
                  t.type === TransactionType.EXPENSE && 
                  tDate.getMonth() === selectedDate.getMonth() &&
@@ -87,8 +88,13 @@ const Planning: React.FC = () => {
   };
 
   const futureTransactions = transactions
-    .filter(t => new Date(t.date) > new Date())
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    .filter(t => {
+      const tDate = parseLocalDateString(isoToLocalDateString(t.date));
+      const today = new Date();
+      today.setHours(0,0,0,0);
+      return tDate > today;
+    })
+    .sort((a, b) => parseLocalDateString(isoToLocalDateString(a.date)).getTime() - parseLocalDateString(isoToLocalDateString(b.date)).getTime());
 
   const totalBudgetMonth = activeCategories.reduce((acc, cat) => acc + getBudgetForCategory(cat.id), 0);
   const totalSpentMonth = activeCategories.reduce((acc, cat) => acc + getSpentByCategory(cat.id), 0);
@@ -267,7 +273,7 @@ const Planning: React.FC = () => {
                   ) : (
                       <div className="space-y-3">
                           {futureTransactions.map(t => {
-                             const date = new Date(t.date);
+                             const date = parseLocalDateString(isoToLocalDateString(t.date));
                              const cat = categories.find(c => c.id === t.categoryId);
                              
                              return (

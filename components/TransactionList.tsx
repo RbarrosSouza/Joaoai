@@ -4,6 +4,7 @@ import { getIcon } from '../constants';
 import { TransactionType, Transaction } from '../types';
 import { Search, Filter, CalendarClock, CheckCircle2, AlertCircle, Clock, Check, Calendar, ChevronRight, Trash2, RotateCcw } from 'lucide-react';
 import TransactionModal from './TransactionModal';
+import { parseLocalDateString, isoToLocalDateString } from '../utils/dateUtils';
 
 // --- HELPER: Formatting & Date Logic ---
 
@@ -12,7 +13,8 @@ const formatCurrency = (value: number) => {
 };
 
 const getRelativeDateLabel = (dateStr: string) => {
-  const target = new Date(dateStr);
+  // Usar parseLocalDateString para evitar problemas de timezone
+  const target = parseLocalDateString(isoToLocalDateString(dateStr));
   target.setHours(0,0,0,0);
   const today = new Date();
   today.setHours(0,0,0,0);
@@ -173,7 +175,7 @@ const TransactionItem: React.FC<TransactionItemProps> = ({ t, statusStyle, viewM
                                 {statusStyle === 'URGENT' && <Clock size={10} className="text-amber-500" />}
                                 <span className={`text-xs ${styles.dateColor} capitalize`}>
                                     {statusStyle === 'HISTORY' 
-                                    ? new Date(t.paymentDate || t.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
+                                    ? parseLocalDateString(isoToLocalDateString(t.paymentDate || t.date)).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
                                     : getRelativeDateLabel(t.date)
                                     }
                                 </span>
@@ -235,10 +237,13 @@ const TransactionList: React.FC = () => {
   // --- DATA GROUPING STRATEGY ---
   
   const { historyList, scheduleGroups } = useMemo(() => {
+    // Helper para comparar datas de forma segura
+    const getDateValue = (dateStr: string) => parseLocalDateString(isoToLocalDateString(dateStr)).getTime();
+    
     // 1. Paid History (Flat List)
     const history = transactions
       .filter(t => !t.isPending)
-      .sort((a, b) => new Date(b.paymentDate || b.date).getTime() - new Date(a.paymentDate || a.date).getTime());
+      .sort((a, b) => getDateValue(b.paymentDate || b.date) - getDateValue(a.paymentDate || a.date));
 
     // 2. Schedule Groups (The new UX)
     const pending = transactions.filter(t => t.isPending);
@@ -253,7 +258,7 @@ const TransactionList: React.FC = () => {
     const future: Record<string, Transaction[]> = {}; // Grouped by Month Key "YYYY-MM"
 
     pending.forEach(t => {
-       const tDate = new Date(t.date);
+       const tDate = parseLocalDateString(isoToLocalDateString(t.date));
        tDate.setHours(0,0,0,0);
 
        if (t.type === TransactionType.EXPENSE && tDate < today) {
@@ -269,8 +274,8 @@ const TransactionList: React.FC = () => {
     });
 
     // Sort internal lists
-    overdue.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()); // Oldest overdue first
-    thisWeek.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()); // Soonest first
+    overdue.sort((a, b) => getDateValue(a.date) - getDateValue(b.date)); // Oldest overdue first
+    thisWeek.sort((a, b) => getDateValue(a.date) - getDateValue(b.date)); // Soonest first
     
     // Sort future months keys
     const futureKeys = Object.keys(future).sort();

@@ -12,6 +12,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, 
   CartesianGrid, Line, ComposedChart, Cell 
 } from 'recharts';
+import { parseLocalDateString, isoToLocalDateString } from '../utils/dateUtils';
 
 const Analytics: React.FC = () => {
   const { transactions, isPrivacyMode } = useFinance();
@@ -55,7 +56,7 @@ const Analytics: React.FC = () => {
     const year = selectedDate.getFullYear();
     
     const filtered = transactions.filter(t => {
-      const d = new Date(t.date);
+      const d = parseLocalDateString(isoToLocalDateString(t.date));
       return d.getMonth() === month && d.getFullYear() === year;
     });
 
@@ -73,7 +74,7 @@ const Analytics: React.FC = () => {
     const year = prevDate.getFullYear();
 
     const filtered = transactions.filter(t => {
-      const d = new Date(t.date);
+      const d = parseLocalDateString(isoToLocalDateString(t.date));
       return d.getMonth() === month && d.getFullYear() === year;
     });
 
@@ -93,7 +94,7 @@ const Analytics: React.FC = () => {
         d.setMonth(d.getMonth() - i);
         
         const monthTrans = transactions.filter(t => {
-            const tDate = new Date(t.date);
+            const tDate = parseLocalDateString(isoToLocalDateString(t.date));
             return tDate.getMonth() === d.getMonth() && tDate.getFullYear() === d.getFullYear();
         });
 
@@ -142,7 +143,7 @@ const Analytics: React.FC = () => {
       d.setMonth(d.getMonth() - i);
       
       const monthTrans = transactions.filter(t => {
-        const tDate = new Date(t.date);
+        const tDate = parseLocalDateString(isoToLocalDateString(t.date));
         return tDate.getMonth() === d.getMonth() && tDate.getFullYear() === d.getFullYear();
       });
 
@@ -169,7 +170,7 @@ const Analytics: React.FC = () => {
       // Compare with Previous Month always for category specific trends (more relevant immediate context)
       const prevTotal = transactions
         .filter(t => {
-          const d = new Date(t.date);
+          const d = parseLocalDateString(isoToLocalDateString(t.date));
           const prevD = new Date(selectedDate);
           prevD.setMonth(prevD.getMonth() - 1);
           return t.categoryId === cat.id && 
@@ -463,14 +464,14 @@ const Analytics: React.FC = () => {
                   <div className="space-y-4">
                      {currentMonthStats.transactions
                         .filter(t => t.isPending && t.type === TransactionType.EXPENSE)
-                        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+                        .sort((a, b) => parseLocalDateString(isoToLocalDateString(a.date)).getTime() - parseLocalDateString(isoToLocalDateString(b.date)).getTime())
                         .slice(0, 5) // Show top 5
                         .map(t => (
                            <div key={t.id} className="flex items-center justify-between p-3 border-b border-slate-50 last:border-0">
                               <div className="flex items-center gap-3">
                                  <div className="flex flex-col items-center justify-center w-10 h-10 bg-slate-50 rounded-lg text-slate-500 font-bold border border-slate-100">
-                                    <span className="text-[8px] uppercase">{new Date(t.date).toLocaleString('default', { month: 'short' })}</span>
-                                    <span className="text-sm leading-none">{new Date(t.date).getDate()}</span>
+                                    <span className="text-[8px] uppercase">{parseLocalDateString(isoToLocalDateString(t.date)).toLocaleString('default', { month: 'short' })}</span>
+                                    <span className="text-sm leading-none">{parseLocalDateString(isoToLocalDateString(t.date)).getDate()}</span>
                                  </div>
                                  <div>
                                     <p className="font-semibold text-slate-700 text-sm line-clamp-1">{t.description}</p>
