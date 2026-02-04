@@ -107,7 +107,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
       {/* Main Content Area */}
       <main className="flex-1 h-full overflow-y-auto overflow-x-hidden relative scroll-smooth bg-brand-background">
-        <div className="w-full max-w-[1600px] mx-auto h-full flex flex-col p-6 md:p-12 pb-72 md:pb-12">
+        <div className="w-full max-w-[1600px] mx-auto min-h-full flex flex-col p-6 md:p-12 pb-48 md:pb-12">
           {children}
         </div>
       </main>
