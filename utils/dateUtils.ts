@@ -86,7 +86,7 @@ export function dateStringToLocalISO(dateStr: string): string {
   if (dateStr.length === 10 && dateStr.includes('-')) {
     return `${dateStr}T12:00:00.000Z`;
   }
-  
+
   // Se é uma ISO string completa, extrair a data e reformatar
   const date = new Date(dateStr);
   return toLocalISOString(date);
@@ -102,11 +102,19 @@ export function dateStringToLocalISO(dateStr: string): string {
  * @returns String no formato 'YYYY-MM-DD'
  */
 export function isoToLocalDateString(isoString: string): string {
+  if (!isoString) return '';
+
+  // Se já é uma string simples YYYY-MM-DD, retorna diretamente
+  // Isso evita conversão para Date que causaria shift de timezone (UTC -> Local)
+  if (/^\d{4}-\d{2}-\d{2}$/.test(isoString)) {
+    return isoString;
+  }
+
   // Se a string usa nosso padrão T12:00:00, podemos extrair diretamente
   if (isoString.includes('T12:00:00')) {
     return isoString.split('T')[0];
   }
-  
+
   // Caso contrário, parsear e usar data local
   const date = new Date(isoString);
   return toLocalDateString(date);
