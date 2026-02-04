@@ -20,8 +20,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     <button
       onClick={() => navigate(path)}
       className={`flex items-center gap-4 px-5 py-3.5 rounded-2xl transition-all duration-300 w-full text-left group ${isActive(path)
-          ? 'bg-white/10 text-brand-lime font-semibold shadow-[0_0_20px_rgba(149,189,35,0.05)] border border-white/5'
-          : 'border border-transparent text-slate-400 hover:text-slate-200 hover:bg-white/5'
+        ? 'bg-white/10 text-brand-lime font-semibold shadow-[0_0_20px_rgba(149,189,35,0.05)] border border-white/5'
+        : 'border border-transparent text-slate-400 hover:text-slate-200 hover:bg-white/5'
         }`}
     >
       <Icon size={22} strokeWidth={isActive(path) ? 2.5 : 2} className={`transition-transform duration-300 ${!isActive(path) && 'group-hover:translate-x-1'}`} />
@@ -107,7 +107,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
       {/* Main Content Area */}
       <main className="flex-1 h-full overflow-y-auto overflow-x-hidden relative scroll-smooth bg-brand-background">
-        <div className="w-full max-w-[1600px] mx-auto h-full flex flex-col p-6 md:p-12 pb-36 md:pb-12">
+        <div className="w-full max-w-[1600px] mx-auto h-full flex flex-col p-6 md:p-12 pb-72 md:pb-12">
           {children}
         </div>
       </main>
