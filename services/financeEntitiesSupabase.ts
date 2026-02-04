@@ -124,9 +124,57 @@ export async function upsertCard(params: { supabase: SupabaseClient; orgId: stri
   if (error) throw error;
 }
 
+
 export async function deleteCard(params: { supabase: SupabaseClient; orgId: string; id: string }): Promise<void> {
   const { error } = await params.supabase.from('credit_cards').delete().eq('org_id', params.orgId).eq('id', params.id);
   if (error) throw error;
 }
+
+// --- Categories ---
+
+type CategoryRow = {
+  id: string;
+  name: string;
+  icon: string | null;
+  color: string | null;
+  parent_id: string | null;
+  is_active: boolean;
+};
+
+import type { Category, SubCategory } from '../types';
+
+export async function fetchCategories(params: { supabase: SupabaseClient; orgId: string }): Promise<Category[]> {
+  const { data, error } = await params.supabase
+    .from('categories')
+    .select('id, name, icon, color, parent_id, is_active')
+    .eq('org_id', params.orgId)
+    .eq('is_active', true)
+    .order('name');
+
+  if (error) throw error;
+
+  const rows = (data ?? []) as CategoryRow[];
+  const parents = rows.filter(r => !r.parent_id);
+  const subs = rows.filter(r => r.parent_id);
+
+  return parents.map(p => {
+    const mySubs = subs.filter(s => s.parent_id === p.id).map(s => ({
+      id: s.id,
+      name: s.name,
+      isActive: s.is_active
+    }));
+
+    return {
+      id: p.id,
+      name: p.name,
+      icon: p.icon ?? 'circle',
+      color: p.color ?? 'bg-slate-100 text-slate-600',
+      subcategories: mySubs,
+      isActive: p.is_active,
+      budget: 0 // TODO: Fetch budgets if needed
+    };
+  });
+}
+
 
 

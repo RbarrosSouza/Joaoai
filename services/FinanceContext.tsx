@@ -7,7 +7,7 @@ import { buildDefaultCategories, buildDefaultUserSettings, type UserSettings } f
 import { readUserSettings, writeUserSettings } from './financeStorage';
 import { getSupabaseClient } from './supabaseClient';
 import { deleteTransaction as deleteTransactionRemote, fetchActiveOrgId, fetchTransactions, upsertTransactions } from './financeTransactionsSupabase';
-import { deleteAccount as deleteAccountRemote, deleteCard as deleteCardRemote, fetchAccounts, fetchCards, upsertAccount, upsertCard } from './financeEntitiesSupabase';
+import { deleteAccount as deleteAccountRemote, deleteCard as deleteCardRemote, fetchAccounts, fetchCards, fetchCategories, upsertAccount, upsertCard } from './financeEntitiesSupabase';
 import { parseLocalDateString, isoToLocalDateString, toLocalDateString, dateStringToLocalISO, getTodayString } from '../utils/dateUtils';
 
 function getAuthDisplayName(user: any): string {
@@ -29,14 +29,14 @@ interface FinanceContextType {
   transactions: Transaction[];
   categories: Category[];
   userSettings: UserSettings;
-  
+
   // Transactions
   addTransaction: (transaction: Transaction) => void;
   addMultipleTransactions: (transactions: Transaction[]) => void;
   updateTransaction: (id: string, updates: Partial<Transaction>) => void;
   deleteTransaction: (id: string) => void;
   toggleTransactionStatus: (id: string) => void;
-  
+
   // Accounts CRUD
   addAccount: (account: Account) => void;
   updateAccount: (id: string, updates: Partial<Account>) => void;
@@ -52,7 +52,7 @@ interface FinanceContextType {
   updateCategory: (id: string, updates: Partial<Category>) => void;
   deleteCategory: (id: string) => void; // Soft delete
   addSubCategory: (categoryId: string, name: string) => void;
-  
+
   // Budget Planning Logic
   setCategoryBudget: (categoryId: string, amount: number, month: Date, applyToFuture: boolean) => void;
 
@@ -75,13 +75,13 @@ export const FinanceProvider: React.FC<{ children: ReactNode }> = ({ children })
   const userId = user?.id ?? 'anonymous';
   const supabase = getSupabaseClient();
   const [activeOrgId, setActiveOrgId] = useState<string | null>(null);
-  
+
   // Novo usuário deve iniciar sempre vazio.
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [cards, setCards] = useState<CreditCard[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>(() => buildDefaultCategories(CATEGORIES));
-  
+
   // User Profile & Settings State (with Persistence)
   const [userSettings, setUserSettings] = useState<UserSettings>(() => {
     const fallback = buildDefaultUserSettings({
@@ -116,15 +116,19 @@ export const FinanceProvider: React.FC<{ children: ReactNode }> = ({ children })
           setTransactions([]);
           return;
         }
-        const [txs, accs, cds] = await Promise.all([
+        const [txs, accs, cds, cats] = await Promise.all([
           fetchTransactions({ supabase, orgId }),
           fetchAccounts({ supabase, orgId }),
           fetchCards({ supabase, orgId }),
+          fetchCategories({ supabase, orgId }),
         ]);
         if (cancelled) return;
         setTransactions(txs);
         setAccounts(accs);
         setCards(cds);
+        if (cats.length > 0) {
+          setCategories(cats);
+        }
       } catch (err) {
         if (!cancelled) addToast('Não consegui carregar seus lançamentos do Supabase.', 'ERROR');
       }
@@ -147,9 +151,9 @@ export const FinanceProvider: React.FC<{ children: ReactNode }> = ({ children })
       return next;
     });
   }, [user]);
-  
-  // Privacy Mode State (Default true for Privacy First)
-  const [isPrivacyMode, setIsPrivacyMode] = useState(true);
+
+  // Privacy Mode State (Default false for Visibility First)
+  const [isPrivacyMode, setIsPrivacyMode] = useState(false);
 
   const togglePrivacyMode = () => {
     setIsPrivacyMode(prev => !prev);
@@ -165,33 +169,33 @@ export const FinanceProvider: React.FC<{ children: ReactNode }> = ({ children })
 
   // Helper to process balance impacts
   const applyTransactionImpact = (t: Transaction, reverse: boolean = false) => {
-     if (t.isPending) return; // Pending transactions don't affect balance yet
+    if (t.isPending) return; // Pending transactions don't affect balance yet
 
-     const multiplier = reverse ? -1 : 1;
+    const multiplier = reverse ? -1 : 1;
 
-     // 1. Account Balance Impact
-     if (t.accountId) {
-         setAccounts(prev => prev.map(acc => {
-             if (acc.id === t.accountId) {
-                 // If Income: Add. If Expense: Subtract.
-                 // Reverse logic handles the undoing.
-                 const amountChange = (t.type === TransactionType.INCOME ? t.amount : -t.amount) * multiplier;
-                 return { ...acc, balance: acc.balance + amountChange };
-             }
-             return acc;
-         }));
-     }
+    // 1. Account Balance Impact
+    if (t.accountId) {
+      setAccounts(prev => prev.map(acc => {
+        if (acc.id === t.accountId) {
+          // If Income: Add. If Expense: Subtract.
+          // Reverse logic handles the undoing.
+          const amountChange = (t.type === TransactionType.INCOME ? t.amount : -t.amount) * multiplier;
+          return { ...acc, balance: acc.balance + amountChange };
+        }
+        return acc;
+      }));
+    }
 
-     // 2. Credit Card Bill Impact (Only Expenses increase bill)
-     if (t.cardId && t.type === TransactionType.EXPENSE) {
-         setCards(prev => prev.map(card => {
-             if (card.id === t.cardId) {
-                 const amountChange = t.amount * multiplier;
-                 return { ...card, currentBill: card.currentBill + amountChange };
-             }
-             return card;
-         }));
-     }
+    // 2. Credit Card Bill Impact (Only Expenses increase bill)
+    if (t.cardId && t.type === TransactionType.EXPENSE) {
+      setCards(prev => prev.map(card => {
+        if (card.id === t.cardId) {
+          const amountChange = t.amount * multiplier;
+          return { ...card, currentBill: card.currentBill + amountChange };
+        }
+        return card;
+      }));
+    }
   };
 
   const addTransaction = (newTransaction: Transaction) => {
@@ -200,33 +204,33 @@ export const FinanceProvider: React.FC<{ children: ReactNode }> = ({ children })
 
   const addMultipleTransactions = (newTransactions: Transaction[]) => {
     const processedTransactions = newTransactions.map(t => {
-        // Advanced Credit Card Logic: Calculate Payment Date based on Closing Day
-        if (t.cardId && t.type === TransactionType.EXPENSE) {
-            const card = cards.find(c => c.id === t.cardId);
-            if (card) {
-                const transDate = parseLocalDateString(isoToLocalDateString(t.date));
-                const closingDay = card.closingDay;
-                
-                // If transaction happened AFTER or ON closing day, it goes to next month
-                let billDate = new Date(transDate);
-                if (transDate.getDate() >= closingDay) {
-                    billDate.setMonth(billDate.getMonth() + 1);
-                }
-                
-                // Set the payment date to the Due Day of the calculated bill month
-                billDate.setDate(card.dueDay);
-                
-                return { 
-                    ...t, 
-                    paymentDate: dateStringToLocalISO(toLocalDateString(billDate))
-                };
-            }
+      // Advanced Credit Card Logic: Calculate Payment Date based on Closing Day
+      if (t.cardId && t.type === TransactionType.EXPENSE) {
+        const card = cards.find(c => c.id === t.cardId);
+        if (card) {
+          const transDate = parseLocalDateString(isoToLocalDateString(t.date));
+          const closingDay = card.closingDay;
+
+          // If transaction happened AFTER or ON closing day, it goes to next month
+          let billDate = new Date(transDate);
+          if (transDate.getDate() >= closingDay) {
+            billDate.setMonth(billDate.getMonth() + 1);
+          }
+
+          // Set the payment date to the Due Day of the calculated bill month
+          billDate.setDate(card.dueDay);
+
+          return {
+            ...t,
+            paymentDate: dateStringToLocalISO(toLocalDateString(billDate))
+          };
         }
-        return t;
+      }
+      return t;
     });
 
     setTransactions(prev => [...processedTransactions, ...prev]);
-    
+
     // Apply impact for each new transaction
     processedTransactions.forEach(t => applyTransactionImpact(t));
 
@@ -242,29 +246,29 @@ export const FinanceProvider: React.FC<{ children: ReactNode }> = ({ children })
     }
 
     if (newTransactions.length === 1) {
-        addToast('Lançamento adicionado com sucesso!');
+      addToast('Lançamento adicionado com sucesso!');
     } else {
-        addToast(`${newTransactions.length} lançamentos adicionados!`);
+      addToast(`${newTransactions.length} lançamentos adicionados!`);
     }
   };
 
   const updateTransaction = (id: string, updates: Partial<Transaction>) => {
     let updatedForRemote: Transaction | null = null;
     setTransactions(prev => {
-        const oldTransaction = prev.find(t => t.id === id);
-        if (!oldTransaction) return prev;
+      const oldTransaction = prev.find(t => t.id === id);
+      if (!oldTransaction) return prev;
 
-        // 1. Revert impact of old transaction
-        applyTransactionImpact(oldTransaction, true); // Reverse = true
+      // 1. Revert impact of old transaction
+      applyTransactionImpact(oldTransaction, true); // Reverse = true
 
-        // 2. Create new transaction object
-        const newTransaction = { ...oldTransaction, ...updates };
-        updatedForRemote = newTransaction;
+      // 2. Create new transaction object
+      const newTransaction = { ...oldTransaction, ...updates };
+      updatedForRemote = newTransaction;
 
-        // 3. Apply impact of new transaction
-        applyTransactionImpact(newTransaction, false);
+      // 3. Apply impact of new transaction
+      applyTransactionImpact(newTransaction, false);
 
-        return prev.map(t => t.id === id ? newTransaction : t);
+      return prev.map(t => t.id === id ? newTransaction : t);
     });
     addToast('Lançamento atualizado.');
 
@@ -280,11 +284,11 @@ export const FinanceProvider: React.FC<{ children: ReactNode }> = ({ children })
   const deleteTransaction = (id: string) => {
     const transactionToDelete = transactions.find(t => t.id === id);
     if (transactionToDelete) {
-        // Revert impact before deleting
-        applyTransactionImpact(transactionToDelete, true);
-        
-        setTransactions(prev => prev.filter(t => t.id !== id));
-        addToast('Lançamento excluído.', 'INFO');
+      // Revert impact before deleting
+      applyTransactionImpact(transactionToDelete, true);
+
+      setTransactions(prev => prev.filter(t => t.id !== id));
+      addToast('Lançamento excluído.', 'INFO');
     }
 
     if (supabase && user?.id && activeOrgId) {
@@ -301,10 +305,10 @@ export const FinanceProvider: React.FC<{ children: ReactNode }> = ({ children })
     // We are essentially updating the isPending status
     // The logic inside updateTransaction handles the balance reversal/apply
     const newStatus = !transaction.isPending;
-    
+
     updateTransaction(id, {
-        isPending: newStatus,
-        paymentDate: !newStatus ? (transaction.paymentDate || dateStringToLocalISO(getTodayString())) : undefined
+      isPending: newStatus,
+      paymentDate: !newStatus ? (transaction.paymentDate || dateStringToLocalISO(getTodayString())) : undefined
     });
 
     if (!newStatus) addToast('Transação marcada como paga!');
@@ -400,14 +404,14 @@ export const FinanceProvider: React.FC<{ children: ReactNode }> = ({ children })
   };
 
   const updateCategory = (id: string, updates: Partial<Category>) => {
-    setCategories(prev => prev.map(cat => 
+    setCategories(prev => prev.map(cat =>
       cat.id === id ? { ...cat, ...updates } : cat
     ));
     addToast('Categoria atualizada!');
   };
 
   const deleteCategory = (id: string) => {
-    setCategories(prev => prev.map(cat => 
+    setCategories(prev => prev.map(cat =>
       cat.id === id ? { ...cat, isActive: false } : cat
     ));
     addToast('Categoria arquivada.', 'INFO');
@@ -434,26 +438,26 @@ export const FinanceProvider: React.FC<{ children: ReactNode }> = ({ children })
   // --- Budget Logic ---
   const setCategoryBudget = (categoryId: string, amount: number, targetDate: Date, applyToFuture: boolean) => {
     const key = `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}`;
-    
+
     setCategories(prev => prev.map(cat => {
-        if (cat.id !== categoryId) return cat;
+      if (cat.id !== categoryId) return cat;
 
-        const updatedMonthlyBudgets = { ...(cat.monthlyBudgets || {}) };
-        updatedMonthlyBudgets[key] = amount;
+      const updatedMonthlyBudgets = { ...(cat.monthlyBudgets || {}) };
+      updatedMonthlyBudgets[key] = amount;
 
-        let newDefaultBudget = cat.budget;
-        
-        if (applyToFuture) {
-            newDefaultBudget = amount;
-        }
+      let newDefaultBudget = cat.budget;
 
-        return {
-            ...cat,
-            budget: newDefaultBudget, 
-            monthlyBudgets: updatedMonthlyBudgets
-        };
+      if (applyToFuture) {
+        newDefaultBudget = amount;
+      }
+
+      return {
+        ...cat,
+        budget: newDefaultBudget,
+        monthlyBudgets: updatedMonthlyBudgets
+      };
     }));
-    
+
     addToast('Orçamento definido com sucesso!');
   };
 
@@ -498,32 +502,32 @@ export const FinanceProvider: React.FC<{ children: ReactNode }> = ({ children })
 
   // Performance Optimization: Memoize the context value
   const contextValue = useMemo(() => ({
-      accounts, 
-      cards, 
-      transactions, 
-      categories, 
-      userSettings,
-      addTransaction, 
-      addMultipleTransactions,
-      updateTransaction,
-      deleteTransaction,
-      toggleTransactionStatus,
-      addAccount,
-      updateAccount,
-      deleteAccount,
-      addCard,
-      updateCard,
-      deleteCard,
-      addCategory,
-      updateCategory,
-      deleteCategory,
-      addSubCategory,
-      setCategoryBudget,
-      updateUserSettings,
-      getMonthlyStats, 
-      totalBalance,
-      isPrivacyMode,
-      togglePrivacyMode
+    accounts,
+    cards,
+    transactions,
+    categories,
+    userSettings,
+    addTransaction,
+    addMultipleTransactions,
+    updateTransaction,
+    deleteTransaction,
+    toggleTransactionStatus,
+    addAccount,
+    updateAccount,
+    deleteAccount,
+    addCard,
+    updateCard,
+    deleteCard,
+    addCategory,
+    updateCategory,
+    deleteCategory,
+    addSubCategory,
+    setCategoryBudget,
+    updateUserSettings,
+    getMonthlyStats,
+    totalBalance,
+    isPrivacyMode,
+    togglePrivacyMode
   }), [accounts, cards, transactions, categories, userSettings, isPrivacyMode]);
 
   return (
@@ -542,9 +546,9 @@ export const useFinance = () => {
 };
 
 export const useCategories = () => {
-    const context = useContext(FinanceContext);
-    if (context === undefined) {
-      throw new Error('useCategories must be used within a FinanceProvider');
-    }
-    return context.categories;
+  const context = useContext(FinanceContext);
+  if (context === undefined) {
+    throw new Error('useCategories must be used within a FinanceProvider');
+  }
+  return context.categories;
 };
