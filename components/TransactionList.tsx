@@ -5,6 +5,7 @@ import { TransactionType, Transaction } from '../types';
 import { Search, Filter, CalendarClock, CheckCircle2, AlertCircle, Clock, Check, Calendar, ChevronRight, Trash2, RotateCcw } from 'lucide-react';
 import TransactionModal from './TransactionModal';
 import { parseLocalDateString, isoToLocalDateString } from '../utils/dateUtils';
+import { resolveCategory } from '../utils/financeCategoryUtils';
 
 // --- HELPER: Formatting & Date Logic ---
 
@@ -96,8 +97,8 @@ const TransactionItem: React.FC<TransactionItemProps> = ({ t, statusStyle, viewM
         if (navigator.vibrate) navigator.vibrate(50);
     };
 
-    const cat = categories.find(c => c.id === t.categoryId);
-    const subCat = cat?.subcategories?.find(sub => sub.id === t.subCategoryId);
+    const { category: cat, subCategory: resolvedSubCat } = resolveCategory(t.categoryId, categories);
+    const subCat = resolvedSubCat || cat?.subcategories?.find(sub => sub.id === t.subCategoryId);
     const isIncome = t.type === TransactionType.INCOME;
 
     // Styles configuration based on hierarchy
