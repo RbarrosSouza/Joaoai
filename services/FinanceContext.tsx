@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode, useMemo, useEffect } from 'react';
-import { Account, CreditCard, Transaction, MonthlyStats, TransactionType, Category } from '../types';
+import { Account, AccountType, CreditCard, Transaction, MonthlyStats, TransactionType, Category } from '../types';
 import { CATEGORIES } from '../constants';
 import { useToast } from '../components/Toast';
 import { useAuth } from './AuthContext';
@@ -167,6 +167,13 @@ export const FinanceProvider: React.FC<{ children: ReactNode }> = ({ children })
 
   // --- Transactions Logic ---
 
+  // Helper: retorna o ID da conta padrão (primeira WALLET, ou primeira conta disponível)
+  const getDefaultAccountId = (): string | undefined => {
+    const wallet = accounts.find(a => a.type === AccountType.WALLET);
+    if (wallet) return wallet.id;
+    return accounts.length > 0 ? accounts[0].id : undefined;
+  };
+
   // Helper to process balance impacts
   const applyTransactionImpact = (t: Transaction, reverse: boolean = false) => {
     if (t.isPending) return; // Pending transactions don't affect balance yet
@@ -174,11 +181,12 @@ export const FinanceProvider: React.FC<{ children: ReactNode }> = ({ children })
     const multiplier = reverse ? -1 : 1;
 
     // 1. Account Balance Impact
-    if (t.accountId) {
+    // Se não tem accountId E não é transação de cartão, debita da conta padrão (WALLET)
+    const effectiveAccountId = t.accountId || (!t.cardId ? getDefaultAccountId() : undefined);
+
+    if (effectiveAccountId) {
       setAccounts(prev => prev.map(acc => {
-        if (acc.id === t.accountId) {
-          // If Income: Add. If Expense: Subtract.
-          // Reverse logic handles the undoing.
+        if (acc.id === effectiveAccountId) {
           const amountChange = (t.type === TransactionType.INCOME ? t.amount : -t.amount) * multiplier;
           return { ...acc, balance: acc.balance + amountChange };
         }
@@ -203,12 +211,19 @@ export const FinanceProvider: React.FC<{ children: ReactNode }> = ({ children })
   };
 
   const addMultipleTransactions = (newTransactions: Transaction[]) => {
+    const defaultAccId = getDefaultAccountId();
+
     const processedTransactions = newTransactions.map(t => {
+      // Se não tem accountId nem cardId, atribui conta padrão (WALLET)
+      const withDefault = (!t.accountId && !t.cardId && defaultAccId)
+        ? { ...t, accountId: defaultAccId }
+        : t;
+
       // Advanced Credit Card Logic: Calculate Payment Date based on Closing Day
-      if (t.cardId && t.type === TransactionType.EXPENSE) {
-        const card = cards.find(c => c.id === t.cardId);
+      if (withDefault.cardId && withDefault.type === TransactionType.EXPENSE) {
+        const card = cards.find(c => c.id === withDefault.cardId);
         if (card) {
-          const transDate = parseLocalDateString(isoToLocalDateString(t.date));
+          const transDate = parseLocalDateString(isoToLocalDateString(withDefault.date));
           const closingDay = card.closingDay;
 
           // If transaction happened AFTER or ON closing day, it goes to next month
@@ -221,12 +236,12 @@ export const FinanceProvider: React.FC<{ children: ReactNode }> = ({ children })
           billDate.setDate(card.dueDay);
 
           return {
-            ...t,
+            ...withDefault,
             paymentDate: dateStringToLocalISO(toLocalDateString(billDate))
           };
         }
       }
-      return t;
+      return withDefault;
     });
 
     setTransactions(prev => [...processedTransactions, ...prev]);
