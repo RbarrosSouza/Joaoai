@@ -16,6 +16,7 @@ const Landing: React.FC = () => {
     const { session } = useAuth();
     const navigate = useNavigate();
     const [scrolled, setScrolled] = useState(false);
+    const [mobileMenu, setMobileMenu] = useState(false);
 
     useEffect(() => {
         const handleScroll = () => {
@@ -44,7 +45,8 @@ const Landing: React.FC = () => {
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-6">
+                    {/* Desktop buttons */}
+                    <div className="hidden md:flex items-center gap-6">
                         {session ? (
                             <button
                                 onClick={() => navigate('/dashboard')}
@@ -69,8 +71,58 @@ const Landing: React.FC = () => {
                             </>
                         )}
                     </div>
+
+                    {/* Mobile hamburger */}
+                    <button
+                        onClick={() => setMobileMenu(!mobileMenu)}
+                        className="md:hidden relative w-8 h-8 flex flex-col items-center justify-center gap-[5px] z-50"
+                        aria-label="Menu"
+                    >
+                        <span className={`block w-5 h-[2px] rounded-full transition-all duration-300 ${mobileMenu ? 'rotate-45 translate-y-[7px] bg-white' : scrolled ? 'bg-white' : 'bg-white'}`}></span>
+                        <span className={`block w-5 h-[2px] rounded-full transition-all duration-300 ${mobileMenu ? 'opacity-0 scale-0' : 'bg-white'}`}></span>
+                        <span className={`block w-5 h-[2px] rounded-full transition-all duration-300 ${mobileMenu ? '-rotate-45 -translate-y-[7px] bg-white' : scrolled ? 'bg-white' : 'bg-white'}`}></span>
+                    </button>
                 </div>
             </motion.nav>
+
+            {/* Mobile Menu Overlay */}
+            {mobileMenu && (
+                <div className="fixed inset-0 z-40 md:hidden" onClick={() => setMobileMenu(false)}>
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+                    <motion.div
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                        className="absolute top-20 left-4 right-4 bg-brand-darkBg/95 backdrop-blur-2xl rounded-2xl border border-white/10 shadow-2xl p-6 space-y-3"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        {session ? (
+                            <button
+                                onClick={() => { setMobileMenu(false); navigate('/dashboard'); }}
+                                className="w-full py-3 text-center text-sm font-semibold text-brand-lime hover:text-white transition-colors rounded-xl hover:bg-white/5"
+                            >
+                                Ir para o App
+                            </button>
+                        ) : (
+                            <>
+                                <button
+                                    onClick={() => { setMobileMenu(false); navigate('/login'); }}
+                                    className="w-full py-3 text-center text-sm font-medium text-white hover:text-brand-lime transition-colors rounded-xl hover:bg-white/5"
+                                >
+                                    Entrar
+                                </button>
+                                <div className="h-px bg-white/10"></div>
+                                <button
+                                    onClick={() => { setMobileMenu(false); navigate('/signup'); }}
+                                    className="w-full py-3 text-center text-sm font-bold text-brand-darkBg bg-brand-lime/90 hover:bg-brand-lime rounded-xl transition-all duration-300 shadow-[0_0_20px_rgba(140,184,42,0.2)]"
+                                >
+                                    Criar conta grátis
+                                </button>
+                            </>
+                        )}
+                    </motion.div>
+                </div>
+            )}
 
             <main className="relative z-10">
                 <HeroSection />
