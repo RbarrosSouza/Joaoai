@@ -80,7 +80,7 @@ const Signup: React.FC = () => {
       // Se o projeto exigir confirmação de e-mail, pode não vir sessão aqui.
       if (data.session) {
         addToast('Conta criada! Bem-vindo(a).', 'SUCCESS');
-        navigate('/', { replace: true });
+        navigate('/dashboard', { replace: true });
       } else {
         addToast('Conta criada! Agora confirme seu e-mail para entrar.', 'SUCCESS');
         navigate('/login', { replace: true });

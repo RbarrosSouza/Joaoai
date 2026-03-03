@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Home, List, CreditCard, PieChart, Plus, Settings, Layers, BarChart3, Landmark, Menu as MenuIcon, X, ChevronRight } from 'lucide-react';
+import { Home, List, CreditCard, PieChart, Plus, Settings, Layers, BarChart3, Landmark, Menu as MenuIcon, X, ChevronRight, Trophy } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import TransactionModal from './TransactionModal';
 
@@ -70,7 +70,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent pointer-events-none"></div>
 
         <div className="flex items-center gap-3 mb-12 px-2 pt-2 relative z-10">
-          <div className="relative group cursor-pointer" onClick={() => navigate('/')}>
+          <div className="relative group cursor-pointer" onClick={() => navigate('/dashboard')}>
             {/* Logo Container */}
             <div className="w-11 h-11 bg-white/5 rounded-xl backdrop-blur-sm border border-white/10 flex items-center justify-center overflow-hidden group-hover:bg-white/10 transition-all shadow-lg">
               <img src="/logo.svg" alt="João.ai Logo" className="w-8 h-8 object-contain" />
@@ -85,13 +85,14 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         </div>
 
         <nav className="flex-1 space-y-2 relative z-10">
-          <NavItem path="/" icon={Home} label="Início" />
+          <NavItem path="/dashboard" icon={Home} label="Início" />
           <NavItem path="/analytics" icon={BarChart3} label="Análises" />
           <NavItem path="/transactions" icon={List} label="Extrato" />
           <NavItem path="/planning" icon={PieChart} label="Planejamento" />
           <NavItem path="/accounts" icon={Landmark} label="Contas" />
           <NavItem path="/cards" icon={CreditCard} label="Cartões" />
           <NavItem path="/categories" icon={Layers} label="Categorias" />
+          <NavItem path="/conquistas" icon={Trophy} label="Conquistas" />
         </nav>
 
         <div className="pt-8 border-t border-white/5 space-y-2 relative z-10">
@@ -133,7 +134,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
           {/* Left Group */}
           <div className="flex-1 flex justify-evenly">
-            <MobileNavItem path="/" icon={Home} label="Início" />
+            <MobileNavItem path="/dashboard" icon={Home} label="Início" />
             <MobileNavItem path="/transactions" icon={List} label="Extrato" />
           </div>
 
@@ -186,6 +187,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               <DrawerItem path="/accounts" icon={Landmark} label="Contas & Bancos" desc="Saldo e liquidez" />
               <DrawerItem path="/cards" icon={CreditCard} label="Cartões de Crédito" desc="Faturas e limites" />
               <DrawerItem path="/categories" icon={Layers} label="Categorias" desc="Organize seus gastos" />
+              <DrawerItem path="/conquistas" icon={Trophy} label="Conquistas" desc="Badges e progresso" />
               <div className="h-4"></div>
               <DrawerItem path="/settings" icon={Settings} label="Configurações" desc="Perfil, segurança e app" />
             </div>

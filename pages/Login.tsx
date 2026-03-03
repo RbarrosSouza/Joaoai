@@ -50,7 +50,7 @@ const Login: React.FC = () => {
       }
 
       addToast('Bem-vindo(a)!', 'SUCCESS');
-      navigate('/', { replace: true });
+      navigate('/dashboard', { replace: true });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Erro inesperado.';
       addToast(`Não consegui entrar. ${message}`, 'ERROR');
