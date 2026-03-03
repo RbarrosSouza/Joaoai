@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useRef } from 'react';
+import React, { Suspense, lazy, useEffect, useRef } from 'react';
 import { motion, useInView } from 'framer-motion';
 
 const JoaoAiDemoVideo = lazy(() => import('./JoaoAiDemoVideo'));
@@ -6,7 +6,14 @@ const JoaoAiDemoVideo = lazy(() => import('./JoaoAiDemoVideo'));
 const WhatsAppDemo: React.FC = () => {
     const sectionRef = useRef<HTMLDivElement>(null);
     const isInView = useInView(sectionRef, { once: true, amount: 0.2, margin: '200px 0px' });
+    const prefetchInView = useInView(sectionRef, { once: true, amount: 0, margin: '600px 0px' });
     const shouldLoadDemo = isInView;
+
+    useEffect(() => {
+        if (prefetchInView) {
+            import('./JoaoAiDemoVideo');
+        }
+    }, [prefetchInView]);
 
     return (
         <section

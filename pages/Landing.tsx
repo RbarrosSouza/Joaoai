@@ -1,16 +1,44 @@
-import React, { useState, useEffect } from 'react';
+import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import HeroSection from '../components/landing/HeroSection';
-import ProblemComparison from '../components/landing/ProblemComparison';
 import WhatsAppDemo from '../components/landing/WhatsAppDemo';
-import HowItWorks from '../components/landing/HowItWorks';
-import FeaturesGrid from '../components/landing/FeaturesGrid';
-import UseCases from '../components/landing/UseCases';
-import Pricing from '../components/landing/Pricing';
-import FAQ from '../components/landing/FAQ';
-import CallToAction from '../components/landing/CallToAction';
 import { useNavigate } from 'react-router-dom';
 
-import { motion } from 'framer-motion';
+import { motion, useInView } from 'framer-motion';
+
+const ProblemComparison = lazy(() => import('../components/landing/ProblemComparison'));
+const HowItWorks = lazy(() => import('../components/landing/HowItWorks'));
+const FeaturesGrid = lazy(() => import('../components/landing/FeaturesGrid'));
+const UseCases = lazy(() => import('../components/landing/UseCases'));
+const Pricing = lazy(() => import('../components/landing/Pricing'));
+const FAQ = lazy(() => import('../components/landing/FAQ'));
+const CallToAction = lazy(() => import('../components/landing/CallToAction'));
+
+const LazySection: React.FC<{
+    children: React.ReactNode;
+    placeholderClassName?: string;
+}> = ({ children, placeholderClassName = 'min-h-[260px]' }) => {
+    const ref = useRef<HTMLDivElement>(null);
+    const isInView = useInView(ref, { once: true, margin: '300px 0px' });
+
+    const placeholder = (
+        <div
+            className={`w-full ${placeholderClassName} rounded-[2rem] bg-white/60 border border-slate-200/60`}
+            aria-hidden="true"
+        />
+    );
+
+    return (
+        <div ref={ref}>
+            {isInView ? (
+                <Suspense fallback={placeholder}>
+                    {children}
+                </Suspense>
+            ) : (
+                placeholder
+            )}
+        </div>
+    );
+};
 
 const Landing: React.FC = () => {
     const navigate = useNavigate();
@@ -104,13 +132,27 @@ const Landing: React.FC = () => {
             <main className="relative z-10">
                 <HeroSection />
                 <WhatsAppDemo />
-                <ProblemComparison />
-                <HowItWorks />
-                <FeaturesGrid />
-                <UseCases />
-                <Pricing />
-                <FAQ />
-                <CallToAction />
+                <LazySection placeholderClassName="min-h-[420px]">
+                    <ProblemComparison />
+                </LazySection>
+                <LazySection placeholderClassName="min-h-[420px]">
+                    <HowItWorks />
+                </LazySection>
+                <LazySection placeholderClassName="min-h-[520px]">
+                    <FeaturesGrid />
+                </LazySection>
+                <LazySection placeholderClassName="min-h-[420px]">
+                    <UseCases />
+                </LazySection>
+                <LazySection placeholderClassName="min-h-[620px]">
+                    <Pricing />
+                </LazySection>
+                <LazySection placeholderClassName="min-h-[480px]">
+                    <FAQ />
+                </LazySection>
+                <LazySection placeholderClassName="min-h-[360px]">
+                    <CallToAction />
+                </LazySection>
             </main>
 
             {/* Liquid Glass Footer */}
