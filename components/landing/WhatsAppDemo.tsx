@@ -1,10 +1,12 @@
-import React, { useRef } from 'react';
+import React, { Suspense, lazy, useRef } from 'react';
 import { motion, useInView } from 'framer-motion';
-import JoaoAiDemoVideo from './JoaoAiDemoVideo';
+
+const JoaoAiDemoVideo = lazy(() => import('./JoaoAiDemoVideo'));
 
 const WhatsAppDemo: React.FC = () => {
     const sectionRef = useRef<HTMLDivElement>(null);
-    const isInView = useInView(sectionRef, { once: true, amount: 0.2 });
+    const isInView = useInView(sectionRef, { once: true, amount: 0.2, margin: '200px 0px' });
+    const shouldLoadDemo = isInView;
 
     return (
         <section
@@ -103,7 +105,24 @@ const WhatsAppDemo: React.FC = () => {
                         animate={isInView ? { opacity: 1, y: 0 } : {}}
                         transition={{ duration: 1, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
                     >
-                        <JoaoAiDemoVideo />
+                        <Suspense
+                            fallback={(
+                                <div className="w-full rounded-[2.5rem] border border-white/10 bg-[#0B2316] shadow-glass p-8 flex flex-col items-center justify-center gap-4 min-h-[520px]">
+                                    <div className="w-12 h-12 rounded-full border-2 border-brand-lime/40 border-t-brand-lime animate-spin"></div>
+                                    <div className="text-xs uppercase tracking-[0.2em] text-brand-lime/80 font-semibold">Carregando demo</div>
+                                </div>
+                            )}
+                        >
+                            {shouldLoadDemo ? (
+                                <JoaoAiDemoVideo />
+                            ) : (
+                                <div className="w-full rounded-[2.5rem] border border-white/10 bg-[#0B2316] shadow-glass p-8 flex flex-col items-center justify-center gap-4 min-h-[520px]">
+                                    <div className="w-16 h-16 rounded-full bg-brand-lime/10 flex items-center justify-center text-brand-lime text-lg font-semibold">▶</div>
+                                    <div className="text-sm text-slate-200 font-medium">Demo pronta para tocar</div>
+                                    <div className="text-xs text-slate-400">Role até aqui para iniciar a animação.</div>
+                                </div>
+                            )}
+                        </Suspense>
 
                         {/* Mobile-only CTA below video */}
                         <button
