@@ -56,7 +56,7 @@ const Landing: React.FC = () => {
                             <>
                                 <button
                                     onClick={() => navigate('/login')}
-                                    className={`hidden md:block text-sm font-medium transition-colors ${scrolled ? 'text-slate-300 hover:text-white' : 'text-white hover:text-brand-lime drop-shadow-md'}`}
+                                    className={`text-sm font-medium transition-colors ${scrolled ? 'text-slate-300 hover:text-white' : 'text-white hover:text-brand-lime drop-shadow-md'}`}
                                 >
                                     Entrar
                                 </button>
