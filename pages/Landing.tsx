@@ -9,11 +9,10 @@ import Pricing from '../components/landing/Pricing';
 import FAQ from '../components/landing/FAQ';
 import CallToAction from '../components/landing/CallToAction';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../services/AuthContext';
+
 import { motion } from 'framer-motion';
 
 const Landing: React.FC = () => {
-    const { session } = useAuth();
     const navigate = useNavigate();
     const [scrolled, setScrolled] = useState(false);
     const [mobileMenu, setMobileMenu] = useState(false);
@@ -47,29 +46,18 @@ const Landing: React.FC = () => {
 
                     {/* Desktop buttons */}
                     <div className="hidden md:flex items-center gap-6">
-                        {session ? (
-                            <button
-                                onClick={() => navigate('/dashboard')}
-                                className={`text-sm font-semibold transition-colors ${scrolled ? 'text-brand-lime hover:text-white' : 'text-brand-lime hover:text-white drop-shadow-md'}`}
-                            >
-                                Ir para o App
-                            </button>
-                        ) : (
-                            <>
-                                <button
-                                    onClick={() => navigate('/login')}
-                                    className={`text-sm font-medium transition-colors ${scrolled ? 'text-slate-300 hover:text-white' : 'text-white hover:text-brand-lime drop-shadow-md'}`}
-                                >
-                                    Entrar
-                                </button>
-                                <button
-                                    onClick={() => navigate('/signup')}
-                                    className="px-6 py-2.5 rounded-full text-sm font-bold text-brand-darkBg bg-brand-lime/90 hover:bg-brand-lime shadow-[0_0_20px_rgba(140,184,42,0.2)] hover:shadow-[0_0_30px_rgba(140,184,42,0.4)] hover:scale-105 active:scale-95 transition-all duration-300"
-                                >
-                                    Criar conta grátis
-                                </button>
-                            </>
-                        )}
+                        <button
+                            onClick={() => navigate('/login')}
+                            className={`text-sm font-medium transition-colors ${scrolled ? 'text-slate-300 hover:text-white' : 'text-white hover:text-brand-lime drop-shadow-md'}`}
+                        >
+                            Entrar
+                        </button>
+                        <button
+                            onClick={() => navigate('/signup')}
+                            className="px-6 py-2.5 rounded-full text-sm font-bold text-brand-darkBg bg-brand-lime/90 hover:bg-brand-lime shadow-[0_0_20px_rgba(140,184,42,0.2)] hover:shadow-[0_0_30px_rgba(140,184,42,0.4)] hover:scale-105 active:scale-95 transition-all duration-300"
+                        >
+                            Criar conta grátis
+                        </button>
                     </div>
 
                     {/* Mobile hamburger */}
@@ -96,30 +84,19 @@ const Landing: React.FC = () => {
                         className="absolute top-20 left-4 right-4 bg-brand-darkBg/95 backdrop-blur-2xl rounded-2xl border border-white/10 shadow-2xl p-6 space-y-3"
                         onClick={e => e.stopPropagation()}
                     >
-                        {session ? (
-                            <button
-                                onClick={() => { setMobileMenu(false); navigate('/dashboard'); }}
-                                className="w-full py-3 text-center text-sm font-semibold text-brand-lime hover:text-white transition-colors rounded-xl hover:bg-white/5"
-                            >
-                                Ir para o App
-                            </button>
-                        ) : (
-                            <>
-                                <button
-                                    onClick={() => { setMobileMenu(false); navigate('/login'); }}
-                                    className="w-full py-3 text-center text-sm font-medium text-white hover:text-brand-lime transition-colors rounded-xl hover:bg-white/5"
-                                >
-                                    Entrar
-                                </button>
-                                <div className="h-px bg-white/10"></div>
-                                <button
-                                    onClick={() => { setMobileMenu(false); navigate('/signup'); }}
-                                    className="w-full py-3 text-center text-sm font-bold text-brand-darkBg bg-brand-lime/90 hover:bg-brand-lime rounded-xl transition-all duration-300 shadow-[0_0_20px_rgba(140,184,42,0.2)]"
-                                >
-                                    Criar conta grátis
-                                </button>
-                            </>
-                        )}
+                        <button
+                            onClick={() => { setMobileMenu(false); navigate('/login'); }}
+                            className="w-full py-3 text-center text-sm font-medium text-white hover:text-brand-lime transition-colors rounded-xl hover:bg-white/5"
+                        >
+                            Entrar
+                        </button>
+                        <div className="h-px bg-white/10"></div>
+                        <button
+                            onClick={() => { setMobileMenu(false); navigate('/signup'); }}
+                            className="w-full py-3 text-center text-sm font-bold text-brand-darkBg bg-brand-lime/90 hover:bg-brand-lime rounded-xl transition-all duration-300 shadow-[0_0_20px_rgba(140,184,42,0.2)]"
+                        >
+                            Criar conta grátis
+                        </button>
                     </motion.div>
                 </div>
             )}
