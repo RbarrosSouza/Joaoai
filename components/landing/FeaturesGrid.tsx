@@ -55,9 +55,9 @@ const FeaturesGrid: React.FC = () => {
                         </div>
 
                         {/* Embedded Abstract UI Element */}
-                        <div className="absolute bottom-10 right-10 bg-brand-glass backdrop-blur-xl border border-brand-glassBorder rounded-2xl p-6 hidden lg:flex shadow-glass gap-6 items-center transform group-hover:-translate-y-2 transition-transform duration-500">
+                        <div className="relative z-10 mt-8 hidden lg:flex self-end bg-brand-glass backdrop-blur-xl border border-brand-glassBorder rounded-2xl p-6 shadow-glass gap-6 items-center group-hover:-translate-y-2 transition-transform duration-500">
                             <div className="h-16 flex items-center justify-center">
-                                <img src="/Logos/Captura de Tela 2026-02-20 às 02.37.56.png" className="h-full w-auto object-contain" />
+                                <img src="/Logos/joao-logo-high-res.png" alt="João.ai" className="h-full w-auto object-contain" />
                             </div>
                             <div>
                                 <div className="text-xs text-brand-lime font-bold">Fatura Fechada</div>

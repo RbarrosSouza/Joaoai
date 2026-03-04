@@ -1,16 +1,44 @@
-import React, { useState, useEffect } from 'react';
+import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import HeroSection from '../components/landing/HeroSection';
-import ProblemComparison from '../components/landing/ProblemComparison';
 import WhatsAppDemo from '../components/landing/WhatsAppDemo';
-import HowItWorks from '../components/landing/HowItWorks';
-import FeaturesGrid from '../components/landing/FeaturesGrid';
-import UseCases from '../components/landing/UseCases';
-import Pricing from '../components/landing/Pricing';
-import FAQ from '../components/landing/FAQ';
-import CallToAction from '../components/landing/CallToAction';
 import { useNavigate } from 'react-router-dom';
 
-import { motion } from 'framer-motion';
+import { motion, useInView } from 'framer-motion';
+
+const ProblemComparison = lazy(() => import('../components/landing/ProblemComparison'));
+const HowItWorks = lazy(() => import('../components/landing/HowItWorks'));
+const FeaturesGrid = lazy(() => import('../components/landing/FeaturesGrid'));
+const UseCases = lazy(() => import('../components/landing/UseCases'));
+const Pricing = lazy(() => import('../components/landing/Pricing'));
+const FAQ = lazy(() => import('../components/landing/FAQ'));
+const CallToAction = lazy(() => import('../components/landing/CallToAction'));
+
+const LazySection: React.FC<{
+    children: React.ReactNode;
+    placeholderClassName?: string;
+}> = ({ children, placeholderClassName = 'min-h-[260px]' }) => {
+    const ref = useRef<HTMLDivElement>(null);
+    const isInView = useInView(ref, { once: true, margin: '300px 0px' });
+
+    const placeholder = (
+        <div
+            className={`w-full ${placeholderClassName} rounded-[2rem] bg-white/60 border border-slate-200/60`}
+            aria-hidden="true"
+        />
+    );
+
+    return (
+        <div ref={ref}>
+            {isInView ? (
+                <Suspense fallback={placeholder}>
+                    {children}
+                </Suspense>
+            ) : (
+                placeholder
+            )}
+        </div>
+    );
+};
 
 const Landing: React.FC = () => {
     const navigate = useNavigate();
@@ -53,7 +81,7 @@ const Landing: React.FC = () => {
                             Entrar
                         </button>
                         <button
-                            onClick={() => navigate('/signup')}
+                            onClick={() => window.open('https://wa.me/5516981737906?text=Quero%20me%20cadastrar%20gratis%20e%20aproveitar%20o%20Jo%C3%A3o.ai', '_blank')}
                             className="px-6 py-2.5 rounded-full text-sm font-bold text-brand-darkBg bg-brand-lime/90 hover:bg-brand-lime shadow-[0_0_20px_rgba(140,184,42,0.2)] hover:shadow-[0_0_30px_rgba(140,184,42,0.4)] hover:scale-105 active:scale-95 transition-all duration-300"
                         >
                             Criar conta grátis
@@ -92,7 +120,7 @@ const Landing: React.FC = () => {
                         </button>
                         <div className="h-px bg-white/10"></div>
                         <button
-                            onClick={() => { setMobileMenu(false); navigate('/signup'); }}
+                            onClick={() => { setMobileMenu(false); window.open('https://wa.me/5516981737906?text=Quero%20me%20cadastrar%20gratis%20e%20aproveitar%20o%20Jo%C3%A3o.ai', '_blank'); }}
                             className="w-full py-3 text-center text-sm font-bold text-brand-darkBg bg-brand-lime/90 hover:bg-brand-lime rounded-xl transition-all duration-300 shadow-[0_0_20px_rgba(140,184,42,0.2)]"
                         >
                             Criar conta grátis
@@ -104,13 +132,27 @@ const Landing: React.FC = () => {
             <main className="relative z-10">
                 <HeroSection />
                 <WhatsAppDemo />
-                <ProblemComparison />
-                <HowItWorks />
-                <FeaturesGrid />
-                <UseCases />
-                <Pricing />
-                <FAQ />
-                <CallToAction />
+                <LazySection placeholderClassName="min-h-[420px]">
+                    <ProblemComparison />
+                </LazySection>
+                <LazySection placeholderClassName="min-h-[420px]">
+                    <HowItWorks />
+                </LazySection>
+                <LazySection placeholderClassName="min-h-[520px]">
+                    <FeaturesGrid />
+                </LazySection>
+                <LazySection placeholderClassName="min-h-[420px]">
+                    <UseCases />
+                </LazySection>
+                <LazySection placeholderClassName="min-h-[620px]">
+                    <Pricing />
+                </LazySection>
+                <LazySection placeholderClassName="min-h-[480px]">
+                    <FAQ />
+                </LazySection>
+                <LazySection placeholderClassName="min-h-[360px]">
+                    <CallToAction />
+                </LazySection>
             </main>
 
             {/* Liquid Glass Footer */}
@@ -125,7 +167,7 @@ const Landing: React.FC = () => {
                         <div className="flex items-center gap-3">
                             <div className="relative group">
                                 <div className="h-20 flex items-center justify-center overflow-hidden transition-all">
-                                    <img src="/Logos/Captura de Tela 2026-02-20 às 02.37.56.png" alt="João.ai Logo" className="h-full w-auto object-contain" />
+                                    <img src="/Logos/joao-logo-high-res.png" alt="João.ai Logo" className="h-full w-auto object-contain" />
                                 </div>
                                 <div className="absolute top-1 -right-2 w-4 h-4 bg-brand-lime rounded-full border-2 border-brand-darkBg shadow-glow animate-pulse-slow"></div>
                             </div>

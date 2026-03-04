@@ -58,7 +58,7 @@ const Pricing: React.FC = () => {
                         </div>
 
                         <button
-                            onClick={() => navigate('/signup')}
+                            onClick={() => window.open('https://wa.me/5516981737906?text=Quero%20me%20cadastrar%20gratis%20e%20aproveitar%20o%20Jo%C3%A3o.ai', '_blank')}
                             className="w-full py-5 bg-slate-50 text-slate-800 border border-slate-200 rounded-2xl font-semibold hover:bg-slate-100 transition-colors"
                         >
                             Criar conta grátis
@@ -77,23 +77,25 @@ const Pricing: React.FC = () => {
                         <h3 className="text-2xl font-semibold text-white mb-2 relative z-10">Pro</h3>
                         <p className="text-slate-300 font-light mb-8 h-12 relative z-10">Pra quem quer controle total e zero limite.</p>
 
-                        <div className="mb-8 relative h-20 z-10">
-                            <span className="text-lg font-medium text-brand-lime absolute top-2">R$</span>
-                            <div className="relative inline-block ml-6 w-32 h-20 overflow-hidden">
-                                <AnimatePresence mode="popLayout">
-                                    <motion.span
-                                        key={isAnnual ? 'annual' : 'monthly'}
-                                        initial={{ y: 50, opacity: 0 }}
-                                        animate={{ y: 0, opacity: 1 }}
-                                        exit={{ y: -50, opacity: 0 }}
-                                        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-                                        className="absolute inset-0 text-6xl md:text-7xl font-display font-medium text-brand-lime flex items-center"
-                                    >
-                                        {isAnnual ? '12,49' : '29,90'}
-                                    </motion.span>
-                                </AnimatePresence>
+                        <div className="mb-8 relative z-10">
+                            <div className="flex items-baseline gap-1">
+                                <span className="text-lg font-medium text-brand-lime">R$</span>
+                                <div className="relative inline-block w-52 h-20 overflow-hidden">
+                                    <AnimatePresence mode="popLayout">
+                                        <motion.span
+                                            key={isAnnual ? 'annual' : 'monthly'}
+                                            initial={{ y: 50, opacity: 0 }}
+                                            animate={{ y: 0, opacity: 1 }}
+                                            exit={{ y: -50, opacity: 0 }}
+                                            transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                                            className="absolute inset-0 text-6xl md:text-7xl font-display font-medium text-brand-lime flex items-center whitespace-nowrap"
+                                        >
+                                            {isAnnual ? '12,49' : '29,90'}
+                                        </motion.span>
+                                    </AnimatePresence>
+                                </div>
                             </div>
-                            <span className="text-brand-lime/60 font-light absolute bottom-2">/mês{isAnnual && ', R$ 149,90/ano'}</span>
+                            <span className="text-brand-lime/60 font-light text-sm">/mês{isAnnual && ', R$ 149,90/ano'}</span>
                         </div>
 
                         <div className="flex-1 relative z-10">
@@ -108,7 +110,7 @@ const Pricing: React.FC = () => {
                         </div>
 
                         <button
-                            onClick={() => navigate('/signup')}
+                            onClick={() => window.open('https://wa.me/5516981737906?text=Quero%20me%20cadastrar%20gratis%20e%20aproveitar%20o%20Jo%C3%A3o.ai', '_blank')}
                             className="relative z-10 w-full py-5 bg-brand-lime text-brand-darkBg rounded-2xl font-bold hover:shadow-[0_0_40px_rgba(140,184,42,0.4)] hover:-translate-y-1 transition-all duration-300"
                         >
                             Começar 7 dias grátis
