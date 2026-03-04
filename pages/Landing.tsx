@@ -81,7 +81,7 @@ const Landing: React.FC = () => {
                             Entrar
                         </button>
                         <button
-                            onClick={() => navigate('/signup')}
+                            onClick={() => window.open('https://wa.me/5516981737906?text=Quero%20me%20cadastrar%20gratis%20e%20aproveitar%20o%20Jo%C3%A3o.ai', '_blank')}
                             className="px-6 py-2.5 rounded-full text-sm font-bold text-brand-darkBg bg-brand-lime/90 hover:bg-brand-lime shadow-[0_0_20px_rgba(140,184,42,0.2)] hover:shadow-[0_0_30px_rgba(140,184,42,0.4)] hover:scale-105 active:scale-95 transition-all duration-300"
                         >
                             Criar conta grátis
@@ -120,7 +120,7 @@ const Landing: React.FC = () => {
                         </button>
                         <div className="h-px bg-white/10"></div>
                         <button
-                            onClick={() => { setMobileMenu(false); navigate('/signup'); }}
+                            onClick={() => { setMobileMenu(false); window.open('https://wa.me/5516981737906?text=Quero%20me%20cadastrar%20gratis%20e%20aproveitar%20o%20Jo%C3%A3o.ai', '_blank'); }}
                             className="w-full py-3 text-center text-sm font-bold text-brand-darkBg bg-brand-lime/90 hover:bg-brand-lime rounded-xl transition-all duration-300 shadow-[0_0_20px_rgba(140,184,42,0.2)]"
                         >
                             Criar conta grátis
@@ -167,7 +167,7 @@ const Landing: React.FC = () => {
                         <div className="flex items-center gap-3">
                             <div className="relative group">
                                 <div className="h-20 flex items-center justify-center overflow-hidden transition-all">
-                                    <img src="/Logos/Captura de Tela 2026-02-20 às 02.37.56.png" alt="João.ai Logo" className="h-full w-auto object-contain" />
+                                    <img src="/Logos/joao-logo-high-res.png" alt="João.ai Logo" className="h-full w-auto object-contain" />
                                 </div>
                                 <div className="absolute top-1 -right-2 w-4 h-4 bg-brand-lime rounded-full border-2 border-brand-darkBg shadow-glow animate-pulse-slow"></div>
                             </div>

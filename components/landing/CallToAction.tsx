@@ -32,7 +32,7 @@ const CallToAction: React.FC = () => {
 
                     <div className="flex flex-col items-center w-full">
                         <button
-                            onClick={() => navigate('/signup')}
+                            onClick={() => window.open('https://wa.me/5516981737906?text=Quero%20me%20cadastrar%20gratis%20e%20aproveitar%20o%20Jo%C3%A3o.ai', '_blank')}
                             className="group relative px-16 py-6 bg-brand-lime text-brand-darkBg rounded-full text-xl font-bold overflow-hidden transition-transform hover:scale-105 active:scale-95 shadow-[0_0_40px_rgba(140,184,42,0.4)] w-full sm:w-auto"
                         >
                             <span className="relative z-10 flex items-center justify-center gap-3 tracking-wide">
