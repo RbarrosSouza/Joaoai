@@ -1,10 +1,8 @@
 import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
-import HeroSection from '../components/landing/HeroSection';
-import WhatsAppDemo from '../components/landing/WhatsAppDemo';
 import { useNavigate } from 'react-router-dom';
 
-import { motion, useInView } from 'framer-motion';
-
+const HeroSection = lazy(() => import('../components/landing/HeroSection'));
+const WhatsAppDemo = lazy(() => import('../components/landing/WhatsAppDemo'));
 const ProblemComparison = lazy(() => import('../components/landing/ProblemComparison'));
 const HowItWorks = lazy(() => import('../components/landing/HowItWorks'));
 const FeaturesGrid = lazy(() => import('../components/landing/FeaturesGrid'));
@@ -13,12 +11,48 @@ const Pricing = lazy(() => import('../components/landing/Pricing'));
 const FAQ = lazy(() => import('../components/landing/FAQ'));
 const CallToAction = lazy(() => import('../components/landing/CallToAction'));
 
+/* ── Hero fallback: shows instantly while real Hero loads ── */
+const HeroFallback: React.FC = () => (
+    <section className="relative w-full min-h-[100svh] bg-brand-darkBg text-white flex flex-col items-center justify-center overflow-hidden pt-20">
+        <div className="relative z-10 w-full max-w-7xl mx-auto px-6 lg:px-12 flex flex-col items-center text-center">
+            <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full border border-brand-lime/20 bg-brand-lime/5 mb-8">
+                <span className="relative flex h-1.5 w-1.5">
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-brand-lime" />
+                </span>
+                <span className="text-[11px] font-semibold text-brand-lime/80 tracking-[0.15em] uppercase">Assistente Financeiro Inteligente</span>
+            </div>
+            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-light tracking-tight leading-[1.1] mb-6 max-w-4xl mx-auto text-white" style={{ textShadow: '0 16px 32px rgba(0,0,0,0.4)' }}>
+                <span className="font-semibold text-brand-lime">João.ai</span>, o assistente{' '}
+                <br className="hidden sm:block" />
+                financeiro que mora no seu{' '}
+                <span className="font-display italic text-brand-lime font-medium">WhatsApp.</span>
+            </h1>
+            <p className="text-base md:text-lg text-slate-400 font-light leading-relaxed max-w-xl mx-auto">
+                Gastou? Mande um áudio, foto ou PDF.<br className="hidden sm:block" />
+                O João registra, categoriza e organiza tudo pra você. <span className="text-slate-300 font-normal">Simples assim.</span>
+            </p>
+        </div>
+        <div className="absolute bottom-0 left-0 w-full h-48 bg-gradient-to-t from-brand-darkBg to-transparent z-20 pointer-events-none" />
+    </section>
+);
+
 const LazySection: React.FC<{
     children: React.ReactNode;
     placeholderClassName?: string;
 }> = ({ children, placeholderClassName = 'min-h-[260px]' }) => {
     const ref = useRef<HTMLDivElement>(null);
-    const isInView = useInView(ref, { once: true, margin: '300px 0px' });
+    const [isInView, setIsInView] = useState(false);
+
+    useEffect(() => {
+        const el = ref.current;
+        if (!el) return;
+        const observer = new IntersectionObserver(
+            ([entry]) => { if (entry.isIntersecting) { setIsInView(true); observer.disconnect(); } },
+            { rootMargin: '300px 0px' }
+        );
+        observer.observe(el);
+        return () => observer.disconnect();
+    }, []);
 
     const placeholder = (
         <div
@@ -55,15 +89,13 @@ const Landing: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-brand-background text-slate-800 font-sans font-light selection:bg-brand-lime/30 scroll-smooth overflow-x-hidden">
-            {/* Liquid Glass NavBar */}
-            <motion.nav
-                initial={{ y: -100 }}
-                animate={{ y: 0 }}
-                transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-                className={`fixed top-0 w-full z-50 transition-all duration-500 border-b ${scrolled
+            {/* NavBar */}
+            <nav
+                className={`fixed top-0 w-full z-50 transition-all duration-500 border-b animate-[slideDown_0.8s_cubic-bezier(0.16,1,0.3,1)] ${scrolled
                     ? 'bg-brand-darkBg/80 backdrop-blur-2xl border-white/10 shadow-glass py-2 lg:py-3'
                     : 'bg-transparent border-transparent py-6 lg:py-8'
                     }`}
+                style={{ animationFillMode: 'both' }}
             >
                 <div className="max-w-7xl mx-auto px-6 lg:px-12 flex items-center justify-between">
                     <div className="relative group cursor-pointer" onClick={() => window.scrollTo(0, 0)}>
@@ -99,17 +131,14 @@ const Landing: React.FC = () => {
                         <span className={`block w-5 h-[2px] rounded-full transition-all duration-300 ${mobileMenu ? '-rotate-45 -translate-y-[7px] bg-white' : scrolled ? 'bg-white' : 'bg-white'}`}></span>
                     </button>
                 </div>
-            </motion.nav>
+            </nav>
 
             {/* Mobile Menu Overlay */}
             {mobileMenu && (
                 <div className="fixed inset-0 z-40 md:hidden" onClick={() => setMobileMenu(false)}>
                     <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-                    <motion.div
-                        initial={{ opacity: 0, y: -20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-                        className="absolute top-20 left-4 right-4 bg-brand-darkBg/95 backdrop-blur-2xl rounded-2xl border border-white/10 shadow-2xl p-6 space-y-3"
+                    <div
+                        className="absolute top-20 left-4 right-4 bg-brand-darkBg/95 backdrop-blur-2xl rounded-2xl border border-white/10 shadow-2xl p-6 space-y-3 animate-[fadeSlideDown_0.3s_ease-out]"
                         onClick={e => e.stopPropagation()}
                     >
                         <button
@@ -125,13 +154,17 @@ const Landing: React.FC = () => {
                         >
                             Criar conta grátis
                         </button>
-                    </motion.div>
+                    </div>
                 </div>
             )}
 
             <main className="relative z-10">
-                <HeroSection />
-                <WhatsAppDemo />
+                <Suspense fallback={<HeroFallback />}>
+                    <HeroSection />
+                </Suspense>
+                <LazySection placeholderClassName="min-h-[600px] !bg-brand-darkBg !border-0">
+                    <WhatsAppDemo />
+                </LazySection>
                 <LazySection placeholderClassName="min-h-[420px]">
                     <ProblemComparison />
                 </LazySection>

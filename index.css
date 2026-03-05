@@ -60,3 +60,14 @@
     padding-top: env(safe-area-inset-top);
   }
 }
+
+/* ── Landing page animations (no framer-motion needed) ── */
+@keyframes slideDown {
+  from { transform: translateY(-100%); }
+  to { transform: translateY(0); }
+}
+
+@keyframes fadeSlideDown {
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
