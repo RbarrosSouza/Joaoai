@@ -69,7 +69,7 @@ const WhatsAppDemo: React.FC = () => {
                         </p>
 
                         <button
-                            onClick={() => window.location.hash = '/signup'}
+                            onClick={() => window.open('https://wa.me/5516981737906?text=Quero%20me%20cadastrar%20gratis%20e%20aproveitar%20o%20Jo%C3%A3o.ai', '_blank')}
                             className="hidden lg:flex group items-center justify-center gap-2.5 px-7 py-3.5 bg-brand-lime/90 hover:bg-brand-lime text-brand-darkBg rounded-full text-sm font-bold transition-all duration-300 shadow-[0_0_30px_rgba(140,184,42,0.25)] hover:shadow-[0_0_40px_rgba(140,184,42,0.4)] hover:scale-[1.02] active:scale-[0.98]"
                         >
                             Começar Gratuitamente
@@ -133,7 +133,7 @@ const WhatsAppDemo: React.FC = () => {
 
                         {/* Mobile-only CTA below video */}
                         <button
-                            onClick={() => window.location.hash = '/signup'}
+                            onClick={() => window.open('https://wa.me/5516981737906?text=Quero%20me%20cadastrar%20gratis%20e%20aproveitar%20o%20Jo%C3%A3o.ai', '_blank')}
                             className="flex lg:hidden group items-center justify-center gap-2.5 mx-auto mt-6 px-7 py-3.5 bg-brand-lime/90 hover:bg-brand-lime text-brand-darkBg rounded-full text-sm font-bold transition-all duration-300 shadow-[0_0_30px_rgba(140,184,42,0.25)] active:scale-[0.98]"
                         >
                             Começar Gratuitamente
