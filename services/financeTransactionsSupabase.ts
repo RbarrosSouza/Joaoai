@@ -67,7 +67,6 @@ export async function upsertTransactions(params: {
     amount: t.amount,
     date: t.date,
     payment_date: t.paymentDate || null,
-    competence_date: t.date, // Defaulting competence to date
     type: t.type,
     status: t.isPending ? 'PENDING' : 'PAID',
     category_id: t.categoryId || null,
