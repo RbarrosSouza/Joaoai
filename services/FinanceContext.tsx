@@ -252,7 +252,7 @@ export const FinanceProvider: React.FC<{ children: ReactNode }> = ({ children })
     // Persistência via Supabase
     if (supabase && user?.id && activeOrgId) {
       void upsertTransactions({ supabase, orgId: activeOrgId, userId: user.id, transactions: processedTransactions }).catch((err) => {
-        console.error('[upsertTransactions] erro:', err);
+        console.error('[upsertTransactions] erro:', JSON.stringify(err, null, 2), err);
         addToast('Não consegui salvar seus lançamentos no Supabase. Tente novamente.', 'ERROR');
       });
     } else if (user?.id) {
