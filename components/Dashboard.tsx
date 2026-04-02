@@ -578,8 +578,8 @@ const Dashboard: React.FC = () => {
                      </div>
                   </div>
 
-                  <div className="flex-1 w-full text-xs">
-                     <ResponsiveContainer width="100%" height="100%">
+                  <div className="flex-1 w-full text-xs min-h-[200px]">
+                     <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
                         <BarChart data={monthlyComparisonData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }} barGap={6}>
                            <CartesianGrid vertical={false} stroke="#F1F5F9" strokeDasharray="3 3" />
                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94A3B8', fontSize: 11, fontWeight: 500 }} dy={15} />
