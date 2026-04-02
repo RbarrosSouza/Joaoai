@@ -1,6 +1,10 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { Transaction, TransactionType } from '../types';
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const toUuidOrNull = (v: string | undefined | null): string | null =>
+  v && UUID_RE.test(v) ? v : null;
+
 export async function fetchActiveOrgId(params: { supabase: SupabaseClient; userId: string }): Promise<string | null> {
   const { data, error } = await params.supabase
     .from('profiles')
@@ -69,9 +73,9 @@ export async function upsertTransactions(params: {
     payment_date: t.paymentDate || null,
     type: t.type,
     status: t.isPending ? 'PENDING' : 'PAID',
-    category_id: t.categoryId || null,
-    account_id: t.accountId || null,
-    credit_card_id: t.cardId || null,
+    category_id: toUuidOrNull(t.categoryId),
+    account_id: toUuidOrNull(t.accountId),
+    credit_card_id: toUuidOrNull(t.cardId),
     frequency: t.frequency,
     installment_id: t.installmentId || null,
     installments: t.installments || null,
