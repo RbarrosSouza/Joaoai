@@ -40,10 +40,11 @@ const App: React.FC = () => {
         <Suspense fallback={<PageLoader />}>
           <Routes>
             {/* ─── Rotas PÚBLICAS: sem AuthProvider, sem Supabase ─── */}
-            <Route path="/" element={<Landing />} />
+            <Route path="/vendas" element={<Landing />} />
 
             {/* ─── Rotas que precisam de AuthContext ─── */}
             <Route element={<AuthShell />}>
+              <Route path="/" element={<Login />} />
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
 

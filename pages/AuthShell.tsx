@@ -27,7 +27,7 @@ const AuthShell: React.FC<{
           )}
 
           <button
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/vendas')}
             className="flex items-center gap-2"
             aria-label="Ir para o início"
           >
