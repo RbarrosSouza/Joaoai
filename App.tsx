@@ -2,13 +2,15 @@ import React, { Suspense, lazy } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ToastProvider } from './components/Toast';
 
+// Caminho da raiz "/" entra no main bundle para evitar waterfall de Suspense
+// e mostrar o formulário de Login junto com o primeiro paint.
+import Login from './pages/Login';
+import AuthShell from './components/AuthShell';
+
 // ── Lazy-loaded pages (code splitting) ──
 const Landing = lazy(() => import('./pages/Landing'));
-const Login = lazy(() => import('./pages/Login'));
 const Signup = lazy(() => import('./pages/Signup'));
 
-// AuthShell carrega AuthProvider apenas quando necessário
-const AuthShell = lazy(() => import('./components/AuthShell'));
 const AppShell = lazy(() => import('./components/AppShell'));
 
 const Dashboard = lazy(() => import('./components/Dashboard'));
