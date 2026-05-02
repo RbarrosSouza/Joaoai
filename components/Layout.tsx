@@ -43,13 +43,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   );
 
   // Mobile Drawer Menu Item
-  const DrawerItem = ({ path, icon: Icon, label, desc }: { path: string, icon: any, label: string, desc: string }) => (
+  const DrawerItem = ({ path, icon: Icon, label, desc, colorClass }: { path: string, icon: any, label: string, desc: string, colorClass: string }) => (
     <button
       onClick={() => { navigate(path); setIsMobileMenuOpen(false); }}
       className="w-full bg-white p-4 rounded-2xl border border-slate-100 flex items-center justify-between group active:scale-[0.98] transition-all shadow-sm hover:border-brand-lime/30"
     >
       <div className="flex items-center gap-4">
-        <div className="w-10 h-10 rounded-full bg-brand-green flex items-center justify-center text-white shadow-sm group-hover:scale-110 transition-transform">
+        <div className={`w-10 h-10 rounded-full ${colorClass} flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform`}>
           <Icon size={20} />
         </div>
         <div className="text-left">
@@ -183,13 +183,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             </div>
 
             <div className="space-y-3 pb-8">
-              <DrawerItem path="/planning" icon={PieChart} label="Planejamento" desc="Metas e orçamentos mensais" />
-              <DrawerItem path="/accounts" icon={Landmark} label="Contas & Bancos" desc="Saldo e liquidez" />
-              <DrawerItem path="/cards" icon={CreditCard} label="Cartões de Crédito" desc="Faturas e limites" />
-              <DrawerItem path="/categories" icon={Layers} label="Categorias" desc="Organize seus gastos" />
-              <DrawerItem path="/conquistas" icon={Trophy} label="Conquistas" desc="Badges e progresso" />
+              <DrawerItem path="/planning" icon={PieChart} label="Planejamento" desc="Metas e orçamentos mensais" colorClass="bg-violet-100 text-violet-600" />
+              <DrawerItem path="/accounts" icon={Landmark} label="Contas & Bancos" desc="Saldo e liquidez" colorClass="bg-blue-100 text-blue-600" />
+              <DrawerItem path="/cards" icon={CreditCard} label="Cartões de Crédito" desc="Faturas e limites" colorClass="bg-orange-100 text-orange-600" />
+              <DrawerItem path="/categories" icon={Layers} label="Categorias" desc="Organize seus gastos" colorClass="bg-emerald-100 text-emerald-600" />
+              <DrawerItem path="/conquistas" icon={Trophy} label="Conquistas" desc="Badges e progresso" colorClass="bg-amber-100 text-amber-600" />
               <div className="h-4"></div>
-              <DrawerItem path="/settings" icon={Settings} label="Configurações" desc="Perfil, segurança e app" />
+              <DrawerItem path="/settings" icon={Settings} label="Configurações" desc="Perfil, segurança e app" colorClass="bg-slate-100 text-slate-600" />
             </div>
           </div>
         </div>
