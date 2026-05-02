@@ -76,100 +76,266 @@ export const INITIAL_CARDS: CreditCard[] = [
 ];
 
 export const CATEGORIES: Category[] = [
-  { 
-    id: 'cat_food', 
-    name: 'Alimentação', 
-    icon: 'coffee', 
-    color: 'bg-orange-100 text-orange-600', 
+  // --- DESPESAS ---
+  {
+    id: 'cat_food',
+    name: 'Alimentação',
+    icon: 'coffee',
+    color: 'bg-orange-100 text-orange-600',
     isActive: true,
     budget: 1200,
     subcategories: [
       { id: 'sub_groceries', name: 'Supermercado', isActive: true },
-      { id: 'sub_restaurants', name: 'Restaurantes', isActive: true },
+      { id: 'sub_restaurants', name: 'Restaurante', isActive: true },
       { id: 'sub_delivery', name: 'Delivery', isActive: true },
-      { id: 'sub_snacks', name: 'Lanches/Café', isActive: true }
-    ]
+      { id: 'sub_snacks', name: 'Padaria/Café', isActive: true },
+      { id: 'sub_feira', name: 'Feira/Hortifruti', isActive: true },
+    ],
   },
-  { 
-    id: 'cat_housing', 
-    name: 'Moradia', 
-    icon: 'home', 
-    color: 'bg-blue-100 text-blue-600', 
+  {
+    id: 'cat_housing',
+    name: 'Moradia',
+    icon: 'home',
+    color: 'bg-blue-100 text-blue-600',
     isActive: true,
     budget: 2500,
     subcategories: [
-      { id: 'sub_rent', name: 'Aluguel/Condomínio', isActive: true },
-      { id: 'sub_utilities', name: 'Luz/Água/Gás', isActive: true },
+      { id: 'sub_rent', name: 'Aluguel/Prestação', isActive: true },
+      { id: 'sub_condo', name: 'Condomínio', isActive: true },
+      { id: 'sub_energy', name: 'Energia Elétrica', isActive: true },
+      { id: 'sub_water', name: 'Água/Esgoto', isActive: true },
+      { id: 'sub_gas', name: 'Gás', isActive: true },
       { id: 'sub_internet', name: 'Internet/TV', isActive: true },
-      { id: 'sub_maintenance', name: 'Manutenção', isActive: true }
-    ]
+      { id: 'sub_maintenance', name: 'Manutenção', isActive: true },
+    ],
   },
-  { 
-    id: 'cat_transport', 
-    name: 'Transporte', 
-    icon: 'car', 
-    color: 'bg-green-100 text-green-600', 
+  {
+    id: 'cat_transport',
+    name: 'Transporte',
+    icon: 'car',
+    color: 'bg-green-100 text-green-600',
     isActive: true,
     budget: 600,
     subcategories: [
       { id: 'sub_fuel', name: 'Combustível', isActive: true },
-      { id: 'sub_uber', name: 'Uber/Táxi', isActive: true },
+      { id: 'sub_uber', name: 'Uber/Táxi/99', isActive: true },
       { id: 'sub_public_transport', name: 'Transporte Público', isActive: true },
       { id: 'sub_parking', name: 'Estacionamento', isActive: true },
-      { id: 'sub_vehicle_maintenance', name: 'Manutenção/IPVA', isActive: true }
-    ]
+      { id: 'sub_vehicle_maintenance', name: 'Manutenção do Carro', isActive: true },
+      { id: 'sub_ipva', name: 'Seguro/IPVA', isActive: true },
+    ],
   },
-  { 
-    id: 'cat_shopping', 
-    name: 'Compras', 
-    icon: 'shopping-bag', 
-    color: 'bg-pink-100 text-pink-600', 
-    isActive: true,
-    budget: 800,
-    subcategories: [
-      { id: 'sub_clothes', name: 'Roupas', isActive: true },
-      { id: 'sub_electronics', name: 'Eletrônicos', isActive: true },
-      { id: 'sub_personal_care', name: 'Cuidados Pessoais', isActive: true },
-      { id: 'sub_gifts', name: 'Presentes', isActive: true }
-    ]
-  },
-  { 
-    id: 'cat_health', 
-    name: 'Saúde', 
-    icon: 'heart', 
-    color: 'bg-red-100 text-red-600', 
+  {
+    id: 'cat_health',
+    name: 'Saúde',
+    icon: 'heart',
+    color: 'bg-red-100 text-red-600',
     isActive: true,
     budget: 400,
     subcategories: [
+      { id: 'sub_health_plan', name: 'Plano de Saúde', isActive: true },
+      { id: 'sub_doctor', name: 'Consultas/Exames', isActive: true },
       { id: 'sub_pharmacy', name: 'Farmácia', isActive: true },
-      { id: 'sub_doctor', name: 'Consultas', isActive: true },
-      { id: 'sub_gym', name: 'Academia', isActive: true }
-    ]
+      { id: 'sub_gym', name: 'Academia/Esportes', isActive: true },
+      { id: 'sub_dentist', name: 'Dentista', isActive: true },
+      { id: 'sub_therapy', name: 'Psicólogo/Terapia', isActive: true },
+    ],
   },
-  { 
-    id: 'cat_leisure', 
-    name: 'Lazer', 
-    icon: 'zap', 
-    color: 'bg-purple-100 text-purple-600', 
-    isActive: true,
-    budget: 500,
-    subcategories: [
-      { id: 'sub_cinema', name: 'Cinema/Streaming', isActive: true },
-      { id: 'sub_travel', name: 'Viagens', isActive: true },
-      { id: 'sub_hobbies', name: 'Hobbies', isActive: true }
-    ]
-  },
-  { 
-    id: 'cat_education', 
-    name: 'Educação', 
-    icon: 'grad', 
-    color: 'bg-yellow-100 text-yellow-600', 
+  {
+    id: 'cat_education',
+    name: 'Educação',
+    icon: 'grad',
+    color: 'bg-yellow-100 text-yellow-600',
     isActive: true,
     budget: 300,
     subcategories: [
-      { id: 'sub_courses', name: 'Cursos', isActive: true },
-      { id: 'sub_books', name: 'Livros', isActive: true }
-    ]
+      { id: 'sub_school', name: 'Escola/Faculdade', isActive: true },
+      { id: 'sub_courses', name: 'Cursos/Especializações', isActive: true },
+      { id: 'sub_books', name: 'Livros/Material', isActive: true },
+      { id: 'sub_languages', name: 'Idiomas', isActive: true },
+    ],
+  },
+  {
+    id: 'cat_leisure',
+    name: 'Lazer',
+    icon: 'music',
+    color: 'bg-purple-100 text-purple-600',
+    isActive: true,
+    budget: 500,
+    subcategories: [
+      { id: 'sub_cinema', name: 'Streaming', isActive: true },
+      { id: 'sub_cinema_theater', name: 'Cinema/Teatro', isActive: true },
+      { id: 'sub_travel', name: 'Viagens/Hospedagem', isActive: true },
+      { id: 'sub_bars', name: 'Bares/Festas', isActive: true },
+      { id: 'sub_hobbies', name: 'Hobbies', isActive: true },
+    ],
+  },
+  {
+    id: 'cat_clothing',
+    name: 'Vestuário',
+    icon: 'shirt',
+    color: 'bg-pink-100 text-pink-600',
+    isActive: true,
+    budget: 300,
+    subcategories: [
+      { id: 'sub_clothes', name: 'Roupas', isActive: true },
+      { id: 'sub_shoes', name: 'Calçados', isActive: true },
+      { id: 'sub_accessories', name: 'Acessórios', isActive: true },
+    ],
+  },
+  {
+    id: 'cat_shopping',
+    name: 'Compras & Tecnologia',
+    icon: 'smartphone',
+    color: 'bg-indigo-100 text-indigo-600',
+    isActive: true,
+    budget: 500,
+    subcategories: [
+      { id: 'sub_electronics', name: 'Eletrônicos', isActive: true },
+      { id: 'sub_home_decor', name: 'Casa/Decoração', isActive: true },
+      { id: 'sub_subscriptions', name: 'Assinaturas Online', isActive: true },
+      { id: 'sub_gifts', name: 'Presentes', isActive: true },
+    ],
+  },
+  {
+    id: 'cat_personal_care',
+    name: 'Cuidados Pessoais',
+    icon: 'shopping-bag',
+    color: 'bg-rose-100 text-rose-600',
+    isActive: true,
+    budget: 200,
+    subcategories: [
+      { id: 'sub_salon', name: 'Salão/Barbearia', isActive: true },
+      { id: 'sub_cosmetics', name: 'Cosméticos/Higiene', isActive: true },
+      { id: 'sub_esthetics', name: 'Estética/Bem-estar', isActive: true },
+    ],
+  },
+  {
+    id: 'cat_pets',
+    name: 'Pets',
+    icon: 'dog',
+    color: 'bg-amber-100 text-amber-600',
+    isActive: true,
+    budget: 200,
+    subcategories: [
+      { id: 'sub_pet_food', name: 'Ração/Petisco', isActive: true },
+      { id: 'sub_vet', name: 'Veterinário', isActive: true },
+      { id: 'sub_grooming', name: 'Banho/Tosa', isActive: true },
+    ],
+  },
+  {
+    id: 'cat_family',
+    name: 'Família e Filhos',
+    icon: 'baby',
+    color: 'bg-teal-100 text-teal-600',
+    isActive: true,
+    budget: 0,
+    subcategories: [
+      { id: 'sub_kids_school', name: 'Escola dos Filhos', isActive: true },
+      { id: 'sub_kids_activities', name: 'Atividades Infantis', isActive: true },
+      { id: 'sub_nanny', name: 'Babá/Cuidados', isActive: true },
+    ],
+  },
+  {
+    id: 'cat_services',
+    name: 'Serviços & Taxas',
+    icon: 'wrench',
+    color: 'bg-slate-100 text-slate-600',
+    isActive: true,
+    budget: 0,
+    subcategories: [
+      { id: 'sub_insurance', name: 'Seguros', isActive: true },
+      { id: 'sub_bank_fees', name: 'Tarifas Bancárias', isActive: true },
+      { id: 'sub_docs', name: 'Documentos/Cartório', isActive: true },
+    ],
+  },
+  {
+    id: 'cat_donations',
+    name: 'Doações',
+    icon: 'gift',
+    color: 'bg-emerald-100 text-emerald-600',
+    isActive: true,
+    budget: 0,
+    subcategories: [
+      { id: 'sub_church', name: 'Igreja/Dízimo', isActive: true },
+      { id: 'sub_ngo', name: 'ONGs/Caridade', isActive: true },
+      { id: 'sub_family_help', name: 'Ajuda Familiar', isActive: true },
+    ],
+  },
+  {
+    id: 'cat_other',
+    name: 'Outros',
+    icon: 'briefcase',
+    color: 'bg-gray-100 text-gray-600',
+    isActive: true,
+    budget: 0,
+    subcategories: [],
+  },
+  // --- RECEITAS ---
+  {
+    id: 'cat_salary',
+    name: 'Salário & CLT',
+    icon: 'briefcase',
+    color: 'bg-green-100 text-green-700',
+    isActive: true,
+    budget: 0,
+    subcategories: [
+      { id: 'sub_monthly_salary', name: 'Salário Mensal', isActive: true },
+      { id: 'sub_13th', name: '13º Salário', isActive: true },
+      { id: 'sub_bonus', name: 'Bônus/PLR', isActive: true },
+    ],
+  },
+  {
+    id: 'cat_freelance',
+    name: 'Freelance & Autônomo',
+    icon: 'zap',
+    color: 'bg-blue-100 text-blue-700',
+    isActive: true,
+    budget: 0,
+    subcategories: [
+      { id: 'sub_projects', name: 'Projetos', isActive: true },
+      { id: 'sub_consulting', name: 'Consultoria', isActive: true },
+      { id: 'sub_online_sales', name: 'Vendas Online', isActive: true },
+    ],
+  },
+  {
+    id: 'cat_investments_income',
+    name: 'Investimentos & Rendimentos',
+    icon: 'piggy',
+    color: 'bg-violet-100 text-violet-700',
+    isActive: true,
+    budget: 0,
+    subcategories: [
+      { id: 'sub_dividends', name: 'Dividendos', isActive: true },
+      { id: 'sub_fixed_income', name: 'Renda Fixa/CDB', isActive: true },
+      { id: 'sub_fiis', name: 'FIIs', isActive: true },
+    ],
+  },
+  {
+    id: 'cat_benefits',
+    name: 'Benefícios',
+    icon: 'gift',
+    color: 'bg-teal-100 text-teal-700',
+    isActive: true,
+    budget: 0,
+    subcategories: [
+      { id: 'sub_vr_va', name: 'Vale Refeição/VA', isActive: true },
+      { id: 'sub_gov_aid', name: 'Auxílios do Governo', isActive: true },
+      { id: 'sub_fgts', name: 'FGTS', isActive: true },
+    ],
+  },
+  {
+    id: 'cat_other_income',
+    name: 'Outros Rendimentos',
+    icon: 'landmark',
+    color: 'bg-amber-100 text-amber-700',
+    isActive: true,
+    budget: 0,
+    subcategories: [
+      { id: 'sub_cashback', name: 'Cashback/Reembolso', isActive: true },
+      { id: 'sub_asset_sale', name: 'Venda de Bens', isActive: true },
+      { id: 'sub_rent_income', name: 'Aluguel de Imóvel', isActive: true },
+    ],
   },
 ];
 
@@ -190,9 +356,10 @@ export const INITIAL_TRANSACTIONS: Transaction[] = [
     id: 't2',
     amount: 5500.00,
     description: 'Projeto Freelance',
-    date: new Date(Date.now() - 86400000 * 2).toISOString(), // 2 days ago
+    date: new Date(Date.now() - 86400000 * 2).toISOString(),
     type: TransactionType.INCOME,
-    categoryId: 'cat_shopping', // Placeholder category for income
+    categoryId: 'cat_freelance',
+    subCategoryId: 'sub_projects',
     accountId: '1',
     isPending: false,
     frequency: 'SINGLE'
