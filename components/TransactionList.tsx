@@ -154,38 +154,38 @@ const TransactionItem: React.FC<TransactionItemProps> = ({ t, statusStyle, viewM
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
                 style={{ transform: `translateX(${swipeOffset}px)` }}
-                className={`group relative p-5 transition-transform duration-200 ease-out bg-white hover:bg-slate-50 cursor-pointer ${styles.border}`}
+                className={`group relative p-4 md:p-5 transition-transform duration-200 ease-out bg-white hover:bg-slate-50 cursor-pointer ${styles.border}`}
             >
-                <div className="flex items-center justify-between gap-4">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 md:gap-4">
                     {/* Left: Icon & Info */}
-                    <div className="flex items-center gap-4 flex-1">
+                    <div className="flex items-center gap-4 flex-1 w-full md:w-auto">
                         <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${styles.iconBg} border border-slate-100/50`}>
                             {getIcon(cat?.icon || 'briefcase', 18)}
                         </div>
 
-                        <div className="flex flex-col min-w-0">
-                            <div className="flex items-baseline gap-2">
-                                <span className="font-semibold text-sm text-slate-700 truncate">{t.description}</span>
-                                <span className="text-[10px] text-slate-400 truncate hidden sm:inline-block">
-                                    {cat?.name} {subCat && `/ ${subCat.name}`}
-                                </span>
-                            </div>
+                        <div className="flex flex-col min-w-0 flex-1">
+                            <span className="font-semibold text-sm text-slate-700 break-words leading-snug">{t.description}</span>
 
-                            <div className="flex items-center gap-2 mt-0.5">
-                                {statusStyle === 'OVERDUE' && <AlertCircle size={10} className="text-red-500" />}
-                                {statusStyle === 'URGENT' && <Clock size={10} className="text-amber-500" />}
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                                {statusStyle === 'OVERDUE' && <AlertCircle size={10} className="text-red-500 shrink-0" />}
+                                {statusStyle === 'URGENT' && <Clock size={10} className="text-amber-500 shrink-0" />}
                                 <span className={`text-xs ${styles.dateColor} capitalize`}>
                                     {statusStyle === 'HISTORY'
                                         ? parseLocalDateString(isoToLocalDateString(t.paymentDate || t.date)).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
                                         : getRelativeDateLabel(t.date)
                                     }
                                 </span>
+                                {cat && (
+                                    <span className="text-[10px] text-slate-400">
+                                        · {cat.name}{subCat && ` / ${subCat.name}`}
+                                    </span>
+                                )}
                             </div>
                         </div>
                     </div>
 
                     {/* Right: Amount & Action */}
-                    <div className="flex items-center gap-4 shrink-0">
+                    <div className="flex items-center gap-4 w-full md:w-auto justify-end">
                         <div className="text-right">
                             <span className={`font-bold text-base block ${styles.amountColor}`}>
                                 {isIncome ? '+' : '-'}{formatCurrency(t.amount)}

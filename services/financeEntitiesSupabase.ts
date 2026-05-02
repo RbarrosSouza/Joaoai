@@ -143,6 +143,63 @@ type CategoryRow = {
 
 import type { Category, SubCategory } from '../types';
 
+export async function upsertCategory(params: { supabase: SupabaseClient; orgId: string; category: Category }): Promise<void> {
+  const payload = {
+    id: params.category.id,
+    org_id: params.orgId,
+    name: params.category.name,
+    icon: params.category.icon ?? null,
+    color: params.category.color ?? null,
+    parent_id: null,
+    is_active: params.category.isActive ?? true,
+    updated_at: new Date().toISOString(),
+  };
+
+  const { error } = await params.supabase.from('categories').upsert(payload, { onConflict: 'id' });
+  if (error) throw error;
+}
+
+export async function archiveCategory(params: { supabase: SupabaseClient; orgId: string; id: string }): Promise<void> {
+  const { error } = await params.supabase
+    .from('categories')
+    .update({ is_active: false, updated_at: new Date().toISOString() })
+    .eq('org_id', params.orgId)
+    .eq('id', params.id);
+  if (error) throw error;
+}
+
+export async function upsertSubCategory(params: {
+  supabase: SupabaseClient;
+  orgId: string;
+  parentId: string;
+  subCategory: SubCategory;
+  parentIcon?: string;
+  parentColor?: string;
+}): Promise<void> {
+  const payload = {
+    id: params.subCategory.id,
+    org_id: params.orgId,
+    name: params.subCategory.name,
+    icon: params.parentIcon ?? null,
+    color: params.parentColor ?? null,
+    parent_id: params.parentId,
+    is_active: params.subCategory.isActive ?? true,
+    updated_at: new Date().toISOString(),
+  };
+
+  const { error } = await params.supabase.from('categories').upsert(payload, { onConflict: 'id' });
+  if (error) throw error;
+}
+
+export async function deleteSubCategory(params: { supabase: SupabaseClient; orgId: string; id: string }): Promise<void> {
+  const { error } = await params.supabase
+    .from('categories')
+    .delete()
+    .eq('org_id', params.orgId)
+    .eq('id', params.id);
+  if (error) throw error;
+}
+
 export async function fetchCategories(params: { supabase: SupabaseClient; orgId: string }): Promise<Category[]> {
   const { data, error } = await params.supabase
     .from('categories')

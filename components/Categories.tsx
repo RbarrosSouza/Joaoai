@@ -6,7 +6,7 @@ import { Plus, Edit2, Trash2, X, Check, Layers, ChevronRight, Hash, Sparkles } f
 
 const Categories: React.FC = () => {
   const categories = useCategories();
-  const { addCategory, updateCategory, deleteCategory, addSubCategory } = useFinance();
+  const { addCategory, updateCategory, deleteCategory, addSubCategory, deleteSubCategory } = useFinance();
   
   // State for Modal Editor
   const [editingCategory, setEditingCategory] = useState<Partial<Category> | null>(null);
@@ -38,10 +38,16 @@ const Categories: React.FC = () => {
     if (!editingCategory || !editingCategory.name) return;
 
     if (isNewCategory) {
-      addCategory({
+      const newCat: Category = {
         ...editingCategory,
-        id: `cat_${Date.now()}`,
-      } as Category);
+        id: crypto.randomUUID(),
+        subcategories: [],
+      } as Category;
+      addCategory(newCat);
+      // persist subcategories added during modal editing
+      (editingCategory.subcategories ?? []).forEach(sub => {
+        addSubCategory(newCat.id, sub.name);
+      });
     } else if (editingCategory.id) {
       // Logic to handle removed subcategories if we were tracking them in local state
       // For now, the global 'addSubCategory' handles additions directly to context for existing cats,
@@ -65,7 +71,7 @@ const Categories: React.FC = () => {
       if (!newSubCategoryName.trim() || !editingCategory) return;
       
       const newSub = {
-          id: `sub_${Date.now()}`,
+          id: crypto.randomUUID(),
           name: newSubCategoryName,
           isActive: true
       };
@@ -91,14 +97,13 @@ const Categories: React.FC = () => {
   };
 
   const handleRemoveSubInModal = (subId: string) => {
-      // For visual removal in modal (Soft delete logic would be in context)
-      // Here we simulate updating the local editing state
       setEditingCategory(prev => ({
           ...prev,
           subcategories: prev?.subcategories?.filter(s => s.id !== subId) || []
       }));
-      // Note: If it's an existing category, we might need a 'removeSubCategory' in context, 
-      // currently context only has deleteCategory. Assuming soft-delete or simple UI hide for now.
+      if (!isNewCategory && editingCategory?.id) {
+          deleteSubCategory(editingCategory.id, subId);
+      }
   };
 
   return (

@@ -7,7 +7,7 @@ import { buildDefaultCategories, buildDefaultUserSettings, type UserSettings } f
 import { readUserSettings, writeUserSettings } from './financeStorage';
 import { getSupabaseClient } from './supabaseClient';
 import { deleteTransaction as deleteTransactionRemote, fetchActiveOrgId, fetchTransactions, upsertTransactions } from './financeTransactionsSupabase';
-import { deleteAccount as deleteAccountRemote, deleteCard as deleteCardRemote, fetchAccounts, fetchCards, fetchCategories, upsertAccount, upsertCard } from './financeEntitiesSupabase';
+import { deleteAccount as deleteAccountRemote, deleteCard as deleteCardRemote, fetchAccounts, fetchCards, fetchCategories, upsertAccount, upsertCard, upsertCategory, archiveCategory, upsertSubCategory, deleteSubCategory as deleteSubCategoryRemote } from './financeEntitiesSupabase';
 import { parseLocalDateString, isoToLocalDateString, toLocalDateString, dateStringToLocalISO, getTodayString } from '../utils/dateUtils';
 
 function getAuthDisplayName(user: any): string {
@@ -52,6 +52,8 @@ interface FinanceContextType {
   updateCategory: (id: string, updates: Partial<Category>) => void;
   deleteCategory: (id: string) => void; // Soft delete
   addSubCategory: (categoryId: string, name: string) => void;
+  updateSubCategory: (categoryId: string, subId: string, updates: Partial<{ name: string; isActive: boolean }>) => void;
+  deleteSubCategory: (categoryId: string, subId: string) => void;
 
   // Budget Planning Logic
   setCategoryBudget: (categoryId: string, amount: number, month: Date, applyToFuture: boolean) => void;
@@ -417,13 +419,33 @@ export const FinanceProvider: React.FC<{ children: ReactNode }> = ({ children })
   const addCategory = (category: Category) => {
     setCategories(prev => [...prev, category]);
     addToast('Categoria criada!');
+
+    if (supabase && user?.id && activeOrgId) {
+      void upsertCategory({ supabase, orgId: activeOrgId, category }).catch(() => {
+        addToast('Não consegui salvar a categoria no Supabase.', 'ERROR');
+        setCategories(prev => prev.filter(c => c.id !== category.id));
+      });
+    }
   };
 
   const updateCategory = (id: string, updates: Partial<Category>) => {
-    setCategories(prev => prev.map(cat =>
-      cat.id === id ? { ...cat, ...updates } : cat
-    ));
+    let updatedCategory: Category | undefined;
+
+    setCategories(prev => prev.map(cat => {
+      if (cat.id === id) {
+        updatedCategory = { ...cat, ...updates };
+        return updatedCategory;
+      }
+      return cat;
+    }));
     addToast('Categoria atualizada!');
+
+    if (supabase && user?.id && activeOrgId && updatedCategory) {
+      const cat = updatedCategory;
+      void upsertCategory({ supabase, orgId: activeOrgId, category: cat }).catch(() => {
+        addToast('Não consegui salvar a atualização da categoria.', 'ERROR');
+      });
+    }
   };
 
   const deleteCategory = (id: string) => {
@@ -431,24 +453,80 @@ export const FinanceProvider: React.FC<{ children: ReactNode }> = ({ children })
       cat.id === id ? { ...cat, isActive: false } : cat
     ));
     addToast('Categoria arquivada.', 'INFO');
+
+    if (supabase && user?.id && activeOrgId) {
+      void archiveCategory({ supabase, orgId: activeOrgId, id }).catch(() => {
+        addToast('Não consegui arquivar a categoria no Supabase.', 'ERROR');
+        setCategories(prev => prev.map(cat => cat.id === id ? { ...cat, isActive: true } : cat));
+      });
+    }
   };
 
   const addSubCategory = (categoryId: string, name: string) => {
+    const newSub = { id: crypto.randomUUID(), name, isActive: true };
+    let parentCategory: Category | undefined;
+
     setCategories(prev => prev.map(cat => {
       if (cat.id === categoryId) {
-        const newSub = {
-          id: `sub_${Date.now()}`,
-          name,
-          isActive: true
-        };
-        return {
-          ...cat,
-          subcategories: [...cat.subcategories, newSub]
-        };
+        parentCategory = cat;
+        return { ...cat, subcategories: [...cat.subcategories, newSub] };
       }
       return cat;
     }));
     addToast('Subcategoria adicionada.');
+
+    if (supabase && user?.id && activeOrgId && parentCategory) {
+      const parent = parentCategory;
+      void upsertSubCategory({
+        supabase,
+        orgId: activeOrgId,
+        parentId: categoryId,
+        subCategory: newSub,
+        parentIcon: parent.icon,
+        parentColor: parent.color,
+      }).catch(() => {
+        addToast('Não consegui salvar a subcategoria no Supabase.', 'ERROR');
+        setCategories(p => p.map(cat =>
+          cat.id === categoryId
+            ? { ...cat, subcategories: cat.subcategories.filter(s => s.id !== newSub.id) }
+            : cat
+        ));
+      });
+    }
+  };
+
+  const updateSubCategory = (categoryId: string, subId: string, updates: Partial<{ name: string; isActive: boolean }>) => {
+    setCategories(prev => prev.map(cat =>
+      cat.id === categoryId
+        ? { ...cat, subcategories: cat.subcategories.map(s => s.id === subId ? { ...s, ...updates } : s) }
+        : cat
+    ));
+  };
+
+  const deleteSubCategory = (categoryId: string, subId: string) => {
+    let removedSub: { id: string; name: string; isActive?: boolean } | undefined;
+
+    setCategories(prev => prev.map(cat => {
+      if (cat.id === categoryId) {
+        removedSub = cat.subcategories.find(s => s.id === subId);
+        return { ...cat, subcategories: cat.subcategories.filter(s => s.id !== subId) };
+      }
+      return cat;
+    }));
+
+    if (supabase && user?.id && activeOrgId && removedSub) {
+      const sub = removedSub;
+      void deleteSubCategoryRemote({ supabase, orgId: activeOrgId, id: subId }).catch(() => {
+        addToast('Não consegui remover a subcategoria no Supabase.', 'ERROR');
+        if (sub) {
+          setCategories(prev => prev.map(cat =>
+            cat.id === categoryId
+              ? { ...cat, subcategories: [...cat.subcategories, sub] }
+              : cat
+          ));
+        }
+      });
+    }
   };
 
   // --- Budget Logic ---
@@ -538,6 +616,8 @@ export const FinanceProvider: React.FC<{ children: ReactNode }> = ({ children })
     updateCategory,
     deleteCategory,
     addSubCategory,
+    updateSubCategory,
+    deleteSubCategory,
     setCategoryBudget,
     updateUserSettings,
     getMonthlyStats,
