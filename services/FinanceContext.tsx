@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode, useMemo, useEffect } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useMemo, useEffect, useRef } from 'react';
 import { Account, AccountType, CreditCard, Transaction, MonthlyStats, TransactionType, Category } from '../types';
 import { CATEGORIES } from '../constants';
 import { useToast } from '../components/Toast';
@@ -141,6 +141,48 @@ export const FinanceProvider: React.FC<{ children: ReactNode }> = ({ children })
     };
   }, [addToast, supabase, user?.id]);
 
+  // Reconciliação retroativa: transações futuras não-pendentes lançadas pelo código antigo
+  // já tinham debitado/creditado account.balance. Reverter esse impacto uma vez por sessão.
+  const reconciledOrgRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!activeOrgId || transactions.length === 0 || accounts.length === 0) return;
+    if (reconciledOrgRef.current === activeOrgId) return;
+    reconciledOrgRef.current = activeOrgId;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const corrections = new Map<string, number>();
+    transactions.forEach((t) => {
+      if (t.isPending) return;
+      const txDate = parseLocalDateString(isoToLocalDateString(t.date));
+      if (txDate <= today) return;
+      const accId = t.accountId || (!t.cardId ? getDefaultAccountId() : undefined);
+      if (!accId) return;
+      const delta = t.type === TransactionType.INCOME ? -t.amount : t.amount; // reverte o impacto antigo
+      corrections.set(accId, (corrections.get(accId) || 0) + delta);
+    });
+
+    if (corrections.size === 0) return;
+
+    const updatedAccounts: Account[] = [];
+    setAccounts((prev) => prev.map((acc) => {
+      const delta = corrections.get(acc.id);
+      if (!delta) return acc;
+      const next = { ...acc, balance: acc.balance + delta };
+      updatedAccounts.push(next);
+      return next;
+    }));
+
+    if (supabase && updatedAccounts.length > 0) {
+      updatedAccounts.forEach((acc) => {
+        void upsertAccount({ supabase, orgId: activeOrgId, account: acc }).catch(() => {
+          // silencioso: a próxima sessão tenta reconciliar de novo
+        });
+      });
+    }
+  }, [activeOrgId, transactions, accounts, supabase]);
+
   // Mantém nome/e-mail coerentes com o cadastro (sem sobrescrever se o usuário personalizou depois).
   useEffect(() => {
     if (!user) return;
@@ -179,6 +221,12 @@ export const FinanceProvider: React.FC<{ children: ReactNode }> = ({ children })
   // Helper to process balance impacts
   const applyTransactionImpact = (t: Transaction, reverse: boolean = false) => {
     if (t.isPending) return; // Pending transactions don't affect balance yet
+
+    // Transações com data futura também não afetam o saldo até chegarem.
+    const txDate = parseLocalDateString(isoToLocalDateString(t.date));
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (txDate > today) return;
 
     const multiplier = reverse ? -1 : 1;
 
