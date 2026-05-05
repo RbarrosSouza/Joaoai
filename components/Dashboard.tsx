@@ -1,16 +1,17 @@
 import React, { useMemo, useState } from 'react';
 import { useFinance, useCategories } from '../services/FinanceContext';
-import { Bell, User, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, Calendar, PieChart as PieIcon, BarChart3, Target, Plus, Zap, Wallet, MoreHorizontal, Eye, EyeOff, Sparkles, AlertTriangle, ArrowRight, X, Settings as SettingsIcon, Landmark, CreditCard, Lock } from 'lucide-react';
+import { Bell, User, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, Calendar, PieChart as PieIcon, BarChart3, Target, Plus, Zap, MoreHorizontal, Eye, EyeOff, Sparkles, AlertTriangle, ArrowRight, X, Settings as SettingsIcon, Landmark, CreditCard } from 'lucide-react';
 import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, BarChart, Bar, Legend, YAxis } from 'recharts';
 import { getIcon } from '../constants';
-import { TransactionType, AccountType } from '../types';
+import { TransactionType } from '../types';
 import { useNavigate } from 'react-router-dom';
 import { parseLocalDateString, isoToLocalDateString } from '../utils/dateUtils';
 import { resolveCategory } from '../utils/financeCategoryUtils';
 
 const Dashboard: React.FC = () => {
    const { accounts, cards, totalBalance, getMonthlyStats, transactions, isPrivacyMode, togglePrivacyMode, userSettings } = useFinance();
-   const { income, expenses } = getMonthlyStats();
+   const { income, expenses, expectedExpenses } = getMonthlyStats();
+   const pendingExpenses = Math.max(0, expectedExpenses - expenses);
    const categories = useCategories();
    const navigate = useNavigate();
 
@@ -23,15 +24,6 @@ const Dashboard: React.FC = () => {
    };
 
    // --- LOGIC: FINANCIAL INTELLIGENCE ---
-
-   // 1. Liquidity Split (Cash vs Investments)
-   const liquidityBalance = useMemo(() => {
-      return accounts
-         .filter(a => a.type === AccountType.CHECKING || a.type === AccountType.WALLET)
-         .reduce((acc, curr) => acc + curr.balance, 0);
-   }, [accounts]);
-
-   const investmentBalance = totalBalance - liquidityBalance;
 
    // 2. Real AI Insight Generator (Updated with Pacing Logic)
    const aiInsight = useMemo(() => {
@@ -306,29 +298,32 @@ const Dashboard: React.FC = () => {
          {/* 2. Insight Card + Total Balance (The "Concierge" Feel) */}
          <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-slide-up" style={{ animationDelay: '100ms' }}>
 
-            {/* Total Balance Split - Ultra Premium */}
+            {/* Mês: Gasto + A pagar */}
             <div className="lg:col-span-1 card-base p-8 flex flex-col justify-center relative overflow-hidden group">
                <div className="absolute right-0 top-0 w-32 h-32 bg-brand-lime/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
 
                <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mb-3 flex items-center gap-2">
-                  <Wallet size={14} strokeWidth={2} /> Disponível (Caixa)
+                  <ArrowDownRight size={14} strokeWidth={2} /> Gasto no Mês
                </p>
                <div className="flex items-baseline gap-1">
                   <h2 className={`text-4xl md:text-5xl text-slate-800 tracking-tighter transition-all duration-300 ${privacyClass}`}>
-                     {formatCurrency(liquidityBalance)}
+                     {formatCurrency(expenses)}
                   </h2>
                </div>
 
-               {/* Liquidity Split Visual */}
-               <div className="mt-6 pt-4 border-t border-slate-50 flex items-center justify-between">
+               <button
+                  type="button"
+                  onClick={() => navigate('/planning')}
+                  className="mt-6 pt-4 border-t border-slate-50 flex items-center justify-between text-left hover:opacity-80 transition-opacity"
+               >
                   <div className="flex items-center gap-2 text-slate-500">
-                     <Lock size={12} className="opacity-50" />
-                     <span className="text-xs font-medium">Investido / Reserva</span>
+                     <Calendar size={12} className="opacity-60" />
+                     <span className="text-xs font-medium">A pagar este mês</span>
                   </div>
-                  <span className={`text-sm font-bold text-slate-700 ${privacyClassLight}`}>
-                     {formatCurrency(investmentBalance)}
+                  <span className={`text-sm font-bold ${pendingExpenses > 0 ? 'text-slate-700' : 'text-slate-300'} ${privacyClassLight}`}>
+                     {formatCurrency(pendingExpenses)}
                   </span>
-               </div>
+               </button>
             </div>
 
             {/* AI Insight Card - Real Data */}

@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useCategories, useFinance } from '../services/FinanceContext';
 import { getIcon } from '../constants';
-import { TransactionType } from '../types';
-import { Target, AlertTriangle, Plus, CalendarDays, Wallet, Edit2, ChevronLeft, ChevronRight, X, Check, Repeat, Calendar } from 'lucide-react';
+import { Transaction, TransactionType } from '../types';
+import { Target, AlertTriangle, Plus, CalendarDays, Wallet, Edit2, ChevronLeft, ChevronRight, ChevronDown, X, Check, Repeat, Calendar } from 'lucide-react';
 import { parseLocalDateString, isoToLocalDateString } from '../utils/dateUtils';
 
 const Planning: React.FC = () => {
@@ -95,6 +95,34 @@ const Planning: React.FC = () => {
       return tDate > today;
     })
     .sort((a, b) => parseLocalDateString(isoToLocalDateString(a.date)).getTime() - parseLocalDateString(isoToLocalDateString(b.date)).getTime());
+
+  // Agrupar por YYYY-MM para a lista colapsável de "Lançamentos Futuros".
+  const today = new Date();
+  const currentMonthKey = getMonthKey(today);
+  const futureByMonth = new Map<string, Transaction[]>();
+  futureTransactions.forEach((t) => {
+    const tDate = parseLocalDateString(isoToLocalDateString(t.date));
+    const key = getMonthKey(tDate);
+    const list = futureByMonth.get(key);
+    if (list) list.push(t);
+    else futureByMonth.set(key, [t]);
+  });
+  const futureMonthKeys: string[] = Array.from(futureByMonth.keys()).sort();
+
+  const [expandedMonths, setExpandedMonths] = useState<Set<string>>(() => new Set([currentMonthKey]));
+  const toggleMonth = (key: string) => {
+    setExpandedMonths(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  };
+
+  const formatMonthLabel = (key: string) => {
+    const [y, m] = key.split('-').map(Number);
+    const d = new Date(y, m - 1, 1);
+    return d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+  };
 
   const totalBudgetMonth = activeCategories.reduce((acc, cat) => acc + getBudgetForCategory(cat.id), 0);
   const totalSpentMonth = activeCategories.reduce((acc, cat) => acc + getSpentByCategory(cat.id), 0);
@@ -271,42 +299,81 @@ const Planning: React.FC = () => {
                           <p>Nenhum lançamento futuro.</p>
                       </div>
                   ) : (
-                      <div className="space-y-3">
-                          {futureTransactions.map(t => {
-                             const date = parseLocalDateString(isoToLocalDateString(t.date));
-                             const cat = categories.find(c => c.id === t.categoryId);
-                             
-                             return (
-                                <div key={t.id} className="flex items-center justify-between p-4 bg-white hover:bg-slate-50/50 rounded-2xl border border-slate-100 transition-all group">
-                                    <div className="flex items-center gap-5">
-                                        <div className="flex flex-col items-center justify-center w-12 h-12 bg-slate-50 rounded-xl text-slate-400 font-bold border border-slate-100">
-                                            <span className="text-[10px] uppercase tracking-wider">{date.toLocaleString('default', { month: 'short' })}</span>
-                                            <span className="text-lg leading-none text-slate-700">{date.getDate()}</span>
-                                        </div>
-                                        <div>
-                                            <p className="font-semibold text-slate-700">{t.description}</p>
-                                            <div className="flex items-center gap-2 mt-1">
-                                                <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold uppercase bg-slate-100 text-slate-500`}>
-                                                    {cat?.name}
+                      <div className="space-y-4">
+                          {futureMonthKeys.map(monthKey => {
+                            const items = futureByMonth.get(monthKey)!;
+                            const isOpen = expandedMonths.has(monthKey);
+                            const total = items.reduce((s, t) => s + (t.type === 'INCOME' ? t.amount : -t.amount), 0);
+                            const isCurrent = monthKey === currentMonthKey;
+
+                            return (
+                              <div key={monthKey} className="border border-slate-100 rounded-2xl overflow-hidden bg-white">
+                                <button
+                                  type="button"
+                                  onClick={() => toggleMonth(monthKey)}
+                                  className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50/60 transition-colors"
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <ChevronDown
+                                      size={18}
+                                      className={`text-slate-400 transition-transform ${isOpen ? '' : '-rotate-90'}`}
+                                    />
+                                    <span className="font-bold text-slate-700 capitalize">{formatMonthLabel(monthKey)}</span>
+                                    {isCurrent && (
+                                      <span className="text-[10px] bg-brand-lime/15 text-brand-deep px-2 py-0.5 rounded-md font-bold uppercase tracking-wider">
+                                        Atual
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-4">
+                                    <span className="text-xs text-slate-400 font-medium">{items.length} {items.length === 1 ? 'lançamento' : 'lançamentos'}</span>
+                                    <span className={`text-sm font-bold tracking-tight ${total >= 0 ? 'text-brand-green' : 'text-slate-700'}`}>
+                                      {formatCurrency(Math.abs(total))}
+                                    </span>
+                                  </div>
+                                </button>
+
+                                {isOpen && (
+                                  <div className="px-3 pb-3 space-y-2 animate-fade-in">
+                                    {items.map(t => {
+                                      const date = parseLocalDateString(isoToLocalDateString(t.date));
+                                      const cat = categories.find(c => c.id === t.categoryId);
+                                      return (
+                                        <div key={t.id} className="flex items-center justify-between p-3 bg-white hover:bg-slate-50/50 rounded-xl border border-slate-100 transition-all">
+                                          <div className="flex items-center gap-4">
+                                            <div className="flex flex-col items-center justify-center w-11 h-11 bg-slate-50 rounded-xl text-slate-400 font-bold border border-slate-100">
+                                              <span className="text-[10px] uppercase tracking-wider">{date.toLocaleString('default', { month: 'short' })}</span>
+                                              <span className="text-base leading-none text-slate-700">{date.getDate()}</span>
+                                            </div>
+                                            <div>
+                                              <p className="font-semibold text-slate-700">{t.description}</p>
+                                              <div className="flex items-center gap-2 mt-1">
+                                                <span className="text-[10px] px-2 py-0.5 rounded-md font-bold uppercase bg-slate-100 text-slate-500">
+                                                  {cat?.name}
                                                 </span>
                                                 {t.frequency === 'INSTALLMENT' && (
-                                                    <span className="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-md font-bold uppercase">
-                                                        {t.installments?.current}/{t.installments?.total}
-                                                    </span>
+                                                  <span className="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-md font-bold uppercase">
+                                                    {t.installments?.current}/{t.installments?.total}
+                                                  </span>
                                                 )}
                                                 {t.frequency === 'RECURRING' && (
-                                                    <span className="text-[10px] bg-purple-50 text-purple-600 px-2 py-0.5 rounded-md font-bold uppercase">
-                                                        Fixa
-                                                    </span>
+                                                  <span className="text-[10px] bg-purple-50 text-purple-600 px-2 py-0.5 rounded-md font-bold uppercase">
+                                                    Fixa
+                                                  </span>
                                                 )}
+                                              </div>
                                             </div>
+                                          </div>
+                                          <span className={`font-bold text-base ${t.type === 'INCOME' ? 'text-brand-green' : 'text-slate-700'} tracking-tight`}>
+                                            {formatCurrency(t.amount)}
+                                          </span>
                                         </div>
-                                    </div>
-                                    <span className={`font-bold text-base ${t.type === 'INCOME' ? 'text-brand-green' : 'text-slate-700'} tracking-tight`}>
-                                        {formatCurrency(t.amount)}
-                                    </span>
-                                </div>
-                             )
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                            );
                           })}
                       </div>
                   )}

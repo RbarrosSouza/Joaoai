@@ -237,7 +237,8 @@ const TransactionModal: React.FC<TransactionModalProps> = ({ onClose, editingTra
           accountId: selectedSourceType === 'ACCOUNT' ? selectedSourceId : undefined,
           cardId: selectedSourceType === 'CARD' ? selectedSourceId : undefined,
           frequency: 'RECURRING',
-          isPending: !isPaid
+          // Apenas a parcela do mês corrente respeita o "Já paguei"; futuras nascem pendentes.
+          isPending: i === 0 ? !isPaid : true
         });
       }
     }
