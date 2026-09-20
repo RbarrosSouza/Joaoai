@@ -1,5 +1,5 @@
-import React, { Suspense, lazy } from 'react';
-import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
+import React, { Suspense, lazy, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { ToastProvider } from './components/Toast';
 
 // Caminho da raiz "/" entra no main bundle para evitar waterfall de Suspense
@@ -35,10 +35,31 @@ const PageLoader: React.FC = () => (
   </div>
 );
 
+// Mantém links antigos no formato /#/rota funcionando durante a migração
+// para URLs limpas, como /vendas e /dashboard.
+const LegacyHashRedirect: React.FC = () => {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!window.location.hash.startsWith('#/')) return;
+
+    navigate(
+      {
+        pathname: window.location.hash.slice(1),
+        search: window.location.search,
+      },
+      { replace: true },
+    );
+  }, [navigate]);
+
+  return null;
+};
+
 const App: React.FC = () => {
   return (
     <ToastProvider>
-      <HashRouter>
+      <BrowserRouter>
+        <LegacyHashRedirect />
         <Suspense fallback={<PageLoader />}>
           <Routes>
             {/* ─── Rotas PÚBLICAS: sem AuthProvider, sem Supabase ─── */}
@@ -72,7 +93,7 @@ const App: React.FC = () => {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>
-      </HashRouter>
+      </BrowserRouter>
     </ToastProvider>
   );
 };
