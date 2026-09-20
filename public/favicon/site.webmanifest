@@ -5,20 +5,20 @@
   "scope": "/",
   "icons": [
     {
-      "src": "/favicon/web-app-manifest-192x192.png?v=20260920",
+      "src": "/favicon/android-chrome-192x192.png?v=20260920b",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/favicon/web-app-manifest-512x512.png?v=20260920",
+      "src": "/favicon/android-chrome-512x512.png?v=20260920b",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     }
   ],
-  "theme_color": "#F7F9F8",
-  "background_color": "#F7F9F8",
+  "theme_color": "#012617",
+  "background_color": "#012617",
   "display": "standalone",
   "orientation": "portrait"
 }
