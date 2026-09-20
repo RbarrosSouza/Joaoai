@@ -141,6 +141,52 @@ export const FinanceProvider: React.FC<{ children: ReactNode }> = ({ children })
     };
   }, [addToast, supabase, user?.id]);
 
+  // Lançamentos também podem chegar por canais externos (WhatsApp/n8n).
+  // Mantém os saldos e a lista do site sincronizados sem exigir recarregar a página.
+  useEffect(() => {
+    if (!supabase || !user?.id || !activeOrgId) return;
+
+    let cancelled = false;
+    let refreshing = false;
+
+    const refreshExternalChanges = async () => {
+      if (cancelled || refreshing || document.visibilityState === 'hidden') return;
+      refreshing = true;
+      try {
+        const [txs, accs] = await Promise.all([
+          fetchTransactions({ supabase, orgId: activeOrgId }),
+          fetchAccounts({ supabase, orgId: activeOrgId }),
+        ]);
+        if (!cancelled) {
+          setTransactions(txs);
+          setAccounts(accs);
+        }
+      } catch {
+        // A carga inicial continua sendo responsável por exibir erros.
+        // Uma falha transitória de sincronização não deve interromper a navegação.
+      } finally {
+        refreshing = false;
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') void refreshExternalChanges();
+    };
+
+    const handleFocus = () => void refreshExternalChanges();
+    const intervalId = window.setInterval(() => void refreshExternalChanges(), 10_000);
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [activeOrgId, supabase, user?.id]);
+
   // Reconciliação retroativa: transações futuras não-pendentes lançadas pelo código antigo
   // já tinham debitado/creditado account.balance. Reverter esse impacto uma vez por sessão.
   const reconciledOrgRef = useRef<string | null>(null);
