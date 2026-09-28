@@ -19,9 +19,8 @@ const TransactionModal: React.FC<TransactionModalProps> = ({ onClose, editingTra
   const { addMultipleTransactions, updateTransaction, deleteTransaction, accounts, cards } = useFinance();
   const allCategories = useCategories();
 
-  const activeCategories = allCategories.filter(c => c.isActive !== false && (!c.type || c.type === type));
-
   const [type, setType] = useState<TransactionType>(TransactionType.EXPENSE);
+  const activeCategories = allCategories.filter(c => c.isActive !== false && (!c.type || c.type === type));
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
 
