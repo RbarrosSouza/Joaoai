@@ -1,110 +1,113 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 
 const HeroSection: React.FC = () => {
-    const navigate = useNavigate();
-
     const containerVariants = {
         hidden: { opacity: 0 },
         visible: {
             opacity: 1,
             transition: {
-                staggerChildren: 0.15,
-                delayChildren: 0.2
+                staggerChildren: 0.12,
+                delayChildren: 0.35
             }
         }
     };
 
     const childVariants = {
-        hidden: { y: 40, opacity: 0 },
+        hidden: { y: 28, opacity: 0 },
         visible: {
             y: 0,
             opacity: 1,
-            transition: { duration: 1.2, ease: [0.16, 1, 0.3, 1] }
+            transition: { duration: 1.05, ease: [0.16, 1, 0.3, 1] }
         }
     };
 
     return (
-        <section className="relative w-full min-h-[100svh] bg-brand-darkBg text-white flex flex-col items-center justify-center overflow-hidden pt-20">
+        <section className="joao-hero relative flex min-h-[100svh] w-full items-center overflow-hidden bg-[#012617] pt-24 text-white">
+                <div className="joao-hero-scene" aria-hidden="true">
+                    <img
+                        src="/images/joao-hero-whatsapp-v3.png"
+                        alt=""
+                        className="joao-hero-scene__media"
+                        fetchPriority="high"
+                        decoding="async"
+                    />
+                </div>
 
-            {/* BOLD FRONTEND DESIGN: Massive background logo spinning slowly */}
-            <motion.div
-                initial={{ opacity: 0, scale: 0.8, rotate: -15 }}
-                animate={{ opacity: 0.03, scale: 1, rotate: 0 }}
-                transition={{ duration: 3, ease: 'easeOut' }}
-                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] md:w-[1200px] pointer-events-none z-0 mix-blend-screen"
-            >
-                <img src="/Logos/logo-icon-only.png" alt="" loading="lazy" decoding="async" className="w-full h-full object-contain animate-[spin_120s_linear_infinite]" />
-            </motion.div>
+                <div className="joao-hero__wash pointer-events-none absolute inset-0 z-[1]" />
+                <div className="joao-hero__grain pointer-events-none absolute inset-0 z-[2]" />
 
-            {/* Liquid Glass Background Effects */}
-            <div className="absolute top-[-10%] right-[-10%] w-[600px] h-[600px] bg-brand-primary/40 rounded-full mix-blend-screen filter blur-[120px] animate-morph pointer-events-none z-0"></div>
-            <div className="absolute bottom-[-20%] left-[-10%] w-[700px] h-[700px] bg-brand-lime/10 rounded-full mix-blend-screen filter blur-[150px] animate-morph pointer-events-none z-0" style={{ animationDelay: '2s' }}></div>
-
-            {/* Mesh Noise Overlay for texture */}
-            <div className="absolute inset-0 opacity-[0.35] mix-blend-overlay pointer-events-none z-0" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noiseFilter%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.8%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noiseFilter)%22/%3E%3C/svg%3E")' }}></div>
-
-            <motion.div
-                className="relative z-10 w-full max-w-7xl mx-auto px-6 lg:px-12 flex flex-col items-center text-center"
-                variants={containerVariants}
-                initial="hidden"
-                animate="visible"
-            >
-                {/* Pre-title brand tag */}
-                <motion.div variants={childVariants} className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full border border-brand-lime/20 bg-brand-lime/5 backdrop-blur-xl mb-8">
-                    <span className="relative flex h-1.5 w-1.5">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-lime opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-brand-lime"></span>
-                    </span>
-                    <span className="text-[11px] font-semibold text-brand-lime/80 tracking-[0.15em] uppercase">Assistente Financeiro Inteligente</span>
+                <motion.div
+                    className="relative z-10 mx-auto flex w-full max-w-7xl flex-col items-start px-6 pb-16 pt-8 text-left lg:px-12"
+                    variants={containerVariants}
+                    initial="hidden"
+                    animate="visible"
+                >
+                <motion.div variants={childVariants} className="mb-8 inline-flex items-center gap-3 text-[10px] font-semibold uppercase tracking-[0.28em] text-[#d1fb4b] sm:text-[11px]">
+                    <span className="h-px w-8 bg-[#d1fb4b]" />
+                    Finanças · IA · conversa
                 </motion.div>
 
                 <motion.h1
                     variants={childVariants}
-                    className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-light tracking-tight leading-[1.1] mb-6 max-w-4xl mx-auto text-white"
-                    style={{ textShadow: '0 16px 32px rgba(0,0,0,0.4)' }}
+                    className="max-w-[760px] text-[clamp(3.25rem,7.2vw,7.2rem)] font-display font-bold leading-[0.91] tracking-[-0.075em] text-white"
+                    style={{ textShadow: '0 18px 48px rgba(0,0,0,0.42)' }}
                 >
-                    <span className="font-semibold text-brand-lime">João.ai</span>, o assistente{' '}
-                    <br className="hidden sm:block" />
-                    financeiro que mora no seu{' '}
-                    <span className="font-display italic text-brand-lime font-medium relative">
-                        WhatsApp.
-                        <span className="absolute bottom-1 md:bottom-2 left-0 w-full h-[1.5px] bg-gradient-to-r from-transparent via-brand-lime/60 to-transparent"></span>
-                    </span>
+                    Suas finanças,
+                    <span className="block text-[#d1fb4b]">em uma conversa.</span>
                 </motion.h1>
 
-                <motion.div variants={childVariants} className="flex flex-col items-center w-full max-w-xl mx-auto gap-10">
-                    <p className="text-base md:text-lg text-slate-400 font-light leading-relaxed">
-                        Gastou? Mande um áudio, foto ou PDF.<br className="hidden sm:block" />
-                        O João registra, categoriza e organiza tudo pra você. <span className="text-slate-300 font-normal">Simples assim.</span>
+                <motion.div variants={childVariants} className="mt-8 flex w-full max-w-xl flex-col items-start gap-8">
+                    <p className="max-w-lg text-base font-normal leading-relaxed text-white/68 md:text-lg">
+                        Mande uma mensagem, um áudio ou uma foto. O João registra,
+                        organiza e mostra o que merece sua atenção — enquanto a vida continua.
                     </p>
 
-                    <div className="flex flex-col sm:flex-row justify-center items-center gap-5 w-full">
+                    <div className="flex w-full flex-col items-start gap-4 sm:flex-row sm:items-center">
                         <button
                             onClick={() => window.open('https://wa.me/5516981737906?text=Quero%20me%20cadastrar%20gratis%20e%20aproveitar%20o%20Jo%C3%A3o.ai', '_blank')}
-                            className="group flex items-center justify-center gap-2.5 px-7 py-3.5 bg-brand-lime/90 hover:bg-brand-lime text-brand-darkBg rounded-full text-sm font-bold transition-all duration-300 shadow-[0_0_30px_rgba(140,184,42,0.25)] hover:shadow-[0_0_40px_rgba(140,184,42,0.4)] hover:scale-[1.02] active:scale-[0.98]"
+                            className="group flex items-center justify-center gap-3 rounded-full bg-[#d1fb4b] px-7 py-4 text-sm font-bold text-[#012617] shadow-[0_18px_55px_rgba(209,251,75,0.18)] transition-all duration-500 hover:-translate-y-1 hover:bg-white hover:shadow-[0_24px_70px_rgba(209,251,75,0.28)] active:translate-y-0"
                         >
-                            Começar Gratuitamente
+                            Mandar minha primeira mensagem
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="transform group-hover:translate-x-0.5 transition-transform">
                                 <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
                             </svg>
                         </button>
 
+                        <p className="-mt-1 text-xs text-white/48 sm:absolute sm:mt-[4.75rem]">
+                            Abre uma conversa no WhatsApp · sem instalar aplicativo
+                        </p>
+
                         <button
                             onClick={() => {
                                 document.getElementById('comparison')?.scrollIntoView({ behavior: 'smooth' })
                             }}
-                            className="text-sm font-medium text-slate-500 hover:text-white transition-colors relative after:content-[''] after:absolute after:-bottom-1 after:left-0 after:right-0 after:h-[1px] after:bg-slate-700 hover:after:bg-slate-500 after:transition-colors"
+                            className="group flex items-center gap-3 px-2 py-3 text-sm font-semibold text-white/68 transition-colors hover:text-white"
                         >
-                            Ver Como Funciona
+                            <span className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/[0.06] backdrop-blur-md transition-all group-hover:border-[#d1fb4b]/60 group-hover:bg-[#d1fb4b]/10">
+                                <span className="ml-0.5 block h-0 w-0 border-y-[5px] border-l-[8px] border-y-transparent border-l-white" />
+                            </span>
+                            Ver como funciona
                         </button>
                     </div>
-                </motion.div>
-            </motion.div>
 
-            {/* Fade out to the next section */}
-            <div className="absolute bottom-0 left-0 w-full h-48 bg-gradient-to-t from-brand-darkBg to-transparent z-20 pointer-events-none"></div>
+                    <div className="flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-white/12 pt-5 text-[10px] font-semibold uppercase tracking-[0.19em] text-white/48 sm:text-[11px]">
+                        <span>WhatsApp</span>
+                        <span className="h-1 w-1 rounded-full bg-[#92ef4e]" />
+                        <span>Sem planilhas</span>
+                        <span className="h-1 w-1 rounded-full bg-[#92ef4e]" />
+                        <span>Organização automática</span>
+                    </div>
+                </motion.div>
+                </motion.div>
+
+                <div className="pointer-events-none absolute bottom-0 left-0 z-20 h-40 w-full bg-gradient-to-t from-brand-darkBg via-brand-darkBg/55 to-transparent" />
+                <div className="absolute bottom-8 right-6 z-20 hidden items-center gap-4 md:flex lg:right-12">
+                    <span className="text-[9px] font-semibold uppercase tracking-[0.24em] text-white/42">Descubra o João</span>
+                    <span className="relative block h-10 w-px overflow-hidden bg-white/15">
+                        <span className="joao-scroll-line absolute left-0 top-0 h-4 w-px bg-[#d1fb4b]" />
+                    </span>
+                </div>
         </section>
     );
 };

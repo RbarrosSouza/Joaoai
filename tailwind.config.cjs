@@ -29,7 +29,7 @@ module.exports = {
       },
       fontFamily: {
         sans: ['Inter', 'sans-serif'],
-        display: ['Playfair Display', 'serif'],
+        display: ['Comfortaa', 'sans-serif'],
       },
       boxShadow: {
         premium: '0 10px 40px -10px rgba(6, 78, 59, 0.15)',

@@ -3,7 +3,8 @@ import { useAuth } from '../services/AuthContext';
 import { useFinance } from '../services/FinanceContext';
 import { getSupabaseClient } from '../services/supabaseClient';
 import { fetchActiveOrgId } from '../services/financeTransactionsSupabase';
-import { Trophy, Flame, Sparkles, Lock } from 'lucide-react';
+import { Trophy, Flame, Sparkles } from 'lucide-react';
+import { getAchievementLevel, getAchievementProgress, getEffectiveStreak, isAutomaticallyMeasuredAchievement } from '../utils/achievementProgress';
 
 // ─────────────────────────────────────────
 // Types
@@ -15,6 +16,7 @@ interface AchievementDef {
 }
 interface UserAchievement {
     achievement_id: string; current_value: number; unlocked: boolean; unlocked_at: string | null;
+    updated_at?: string | null;
 }
 interface UserStreak {
     current_streak: number; longest_streak: number; last_activity_date: string | null;
@@ -32,32 +34,15 @@ const TIER_STYLES: Record<string, { border: string; glow: string; label: string;
 };
 
 const CATEGORY_INFO: Record<string, { label: string; emoji: string }> = {
-    streak: { label: 'Streaks', emoji: '🔥' }, transaction: { label: 'Lançamentos', emoji: '📊' },
+    streak: { label: 'Dias seguidos com registros', emoji: '🔥' }, transaction: { label: 'Lançamentos', emoji: '📊' },
     behavior: { label: 'Comportamento', emoji: '🧠' }, financial: { label: 'Financeiro', emoji: '💰' },
 };
 
 const TAB_OPTIONS: { key: TabFilter; label: string }[] = [
-    { key: 'all', label: 'Todos' }, { key: 'streak', label: '🔥 Streaks' },
+    { key: 'all', label: 'Todos' }, { key: 'streak', label: '🔥 Dias seguidos' },
     { key: 'transaction', label: '📊 Lançamentos' }, { key: 'behavior', label: '🧠 Comportamento' },
     { key: 'financial', label: '💰 Financeiro' },
 ];
-
-const LEVELS = [
-    { min: 0, title: 'Novato', icon: '🌱', color: '#94A3B8' },
-    { min: 3, title: 'Aprendiz', icon: '📘', color: '#3B82F6' },
-    { min: 8, title: 'Praticante', icon: '⚡', color: '#8B5CF6' },
-    { min: 15, title: 'Estrategista', icon: '🎯', color: '#EF4444' },
-    { min: 25, title: 'Mestre', icon: '👑', color: '#F59E0B' },
-    { min: 35, title: 'Lendário', icon: '🏆', color: '#8CB82A' },
-];
-
-function computeLevel(total: number) {
-    let idx = 0;
-    for (let i = LEVELS.length - 1; i >= 0; i--) { if (total >= LEVELS[i].min) { idx = i; break; } }
-    const cur = LEVELS[idx], next = LEVELS[idx + 1] ?? cur;
-    const inLevel = total - cur.min, needed = Math.max(1, next.min - cur.min);
-    return { level: idx + 1, title: cur.title, icon: cur.icon, color: cur.color, xp: total, nextXp: next.min, pct: Math.min(100, (inLevel / needed) * 100) };
-}
 
 // ─────────────────────────────────────────
 // SVG Progress Ring
@@ -98,7 +83,7 @@ const Achievements: React.FC = () => {
                 if (x) return; setDefinitions((defs ?? []) as AchievementDef[]);
                 if (!orgId) { setLoading(false); return; }
                 const [{ data: p }, { data: s }] = await Promise.all([
-                    supabase.from('user_achievements').select('achievement_id,current_value,unlocked,unlocked_at').eq('org_id', orgId),
+                    supabase.from('user_achievements').select('achievement_id,current_value,unlocked,unlocked_at,updated_at').eq('org_id', orgId),
                     supabase.from('user_streaks').select('current_streak,longest_streak,last_activity_date').eq('org_id', orgId).maybeSingle(),
                 ]);
                 if (x) return;
@@ -113,7 +98,9 @@ const Achievements: React.FC = () => {
     const pMap = useMemo(() => { const m = new Map<string, UserAchievement>(); userAchievements.forEach(u => m.set(u.achievement_id, u)); return m; }, [userAchievements]);
     const totalUnlocked = userAchievements.filter(u => u.unlocked).length;
     const totalBadges = definitions.length;
-    const lv = computeLevel(totalUnlocked);
+    const lv = getAchievementLevel(totalUnlocked);
+    const now = new Date();
+    const effectiveStreak = getEffectiveStreak(streak?.current_streak ?? 0, streak?.last_activity_date ?? null, now);
 
     const filtered = useMemo(() => {
         const d = activeTab === 'all' ? definitions : definitions.filter(x => x.category === activeTab);
@@ -122,17 +109,11 @@ const Achievements: React.FC = () => {
         return g;
     }, [definitions, activeTab]);
 
-    const nextUp = useMemo(() => {
-        return definitions.filter(d => !pMap.get(d.id)?.unlocked)
-            .sort((a, b) => {
-                const pa = a.threshold > 0 ? (pMap.get(a.id)?.current_value ?? 0) / a.threshold : 0;
-                const pb = b.threshold > 0 ? (pMap.get(b.id)?.current_value ?? 0) / b.threshold : 0;
-                return pb - pa;
-            }).slice(0, 3).map(d => {
-                const p = pMap.get(d.id);
-                return { ...d, pct: d.threshold > 0 ? Math.min(100, ((p?.current_value ?? 0) / d.threshold) * 100) : 0, cur: p?.current_value ?? 0 };
-            });
-    }, [definitions, pMap]);
+    const nextUp = definitions
+        .filter(d => !pMap.get(d.id)?.unlocked && isAutomaticallyMeasuredAchievement(d))
+        .map(d => ({ ...d, progress: getAchievementProgress(d, pMap.get(d.id), effectiveStreak, now) }))
+        .sort((a, b) => b.progress.pct - a.progress.pct || a.sort_order - b.sort_order)
+        .slice(0, 3);
 
     // ── Loading ──
     if (loading) return (
@@ -205,7 +186,7 @@ const Achievements: React.FC = () => {
                 {/* ═══════════ HEADER ═══════════ */}
                 <header className="ach-entrance">
                     <p className="text-xs text-slate-400 font-bold uppercase tracking-[0.2em] mb-1 flex items-center gap-2">
-                        <Sparkles size={14} className="text-brand-lime" /> Gamificação
+                        <Sparkles size={14} className="text-brand-lime" /> Sua evolução
                     </p>
                     <h1 className="text-2xl md:text-3xl font-light text-slate-800 tracking-tight">
                         Minhas <span className="font-bold">Conquistas</span>
@@ -238,22 +219,19 @@ const Achievements: React.FC = () => {
                                             style={{ background: lv.color }}>
                                             {lv.level}
                                         </span>
-                                        <h2 className="text-2xl md:text-3xl font-bold text-white tracking-tight">{lv.title}</h2>
+                                        <h2 className="text-2xl md:text-3xl font-bold text-white tracking-tight">Seu nível: {lv.title}</h2>
                                     </div>
                                     <p className="text-white/50 text-sm font-medium mb-4">
-                                        {totalUnlocked} de {totalBadges} conquistas desbloqueadas
+                                        {lv.unlockedMessage}
                                     </p>
 
-                                    {/* XP Bar */}
+                                    {/* Progresso para o próximo nível */}
                                     <div>
-                                        <div className="flex justify-between mb-1.5">
-                                            <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">{lv.xp} XP</span>
-                                            <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">{lv.nextXp} XP</span>
-                                        </div>
+                                        <p className="text-xs font-medium text-white/70 mb-2">{lv.nextMessage}</p>
                                         <div className="w-full h-2.5 bg-white/10 rounded-full overflow-hidden relative">
                                             <div className="h-full rounded-full transition-all duration-[1500ms] ease-out relative"
                                                 style={{ width: `${lv.pct}%`, background: `linear-gradient(90deg, ${lv.color}, ${lv.color}dd)` }}>
-                                                {/* Shimmer on XP bar */}
+                                                {/* Brilho da barra */}
                                                 <div className="absolute inset-0 overflow-hidden rounded-full">
                                                     <div className="absolute inset-0 -translate-x-full" style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)', animation: 'ach-shimmer 2.5s ease-in-out infinite' }}></div>
                                                 </div>
@@ -284,17 +262,17 @@ const Achievements: React.FC = () => {
                     <div className="card-base p-5 md:p-6 border border-orange-100 relative overflow-hidden">
                         {/* Warm ambient */}
                         <div className="absolute -left-10 -top-10 w-32 h-32 bg-orange-200/20 rounded-full blur-2xl pointer-events-none"></div>
-                        <div className="relative z-10 flex items-center justify-between">
+                        <div className="relative z-10 flex flex-wrap items-center justify-between gap-5">
                             <div className="flex items-center gap-4">
                                 <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center shadow-sm">
                                     <Flame size={26} strokeWidth={2} className="text-white ach-fire" />
                                 </div>
                                 <div>
                                     <div className="flex items-baseline gap-1.5">
-                                        <span className="text-3xl font-bold text-slate-800 tracking-tight">{streak?.current_streak ?? 0}</span>
+                                        <span className="text-3xl font-bold text-slate-800 tracking-tight">{effectiveStreak}</span>
                                         <span className="text-sm font-medium text-slate-400">dias</span>
                                     </div>
-                                    <p className="text-xs text-slate-400 font-medium">Streak de atividade</p>
+                                    <p className="text-xs text-slate-400 font-medium">Dias seguidos com registros</p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-5">
@@ -304,7 +282,7 @@ const Achievements: React.FC = () => {
                                 </div>
                                 <div className="text-center">
                                     <p className="text-xl font-bold text-slate-600">{transactions.length}</p>
-                                    <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Total TXs</p>
+                                    <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Lançamentos</p>
                                 </div>
                             </div>
                         </div>
@@ -345,7 +323,8 @@ const Achievements: React.FC = () => {
                                 {defs.map((def, di) => {
                                     const prog = pMap.get(def.id);
                                     const isUn = !!prog?.unlocked;
-                                    const pct = def.threshold > 0 ? Math.min(100, ((prog?.current_value ?? 0) / def.threshold) * 100) : 0;
+                                    const progress = getAchievementProgress(def, prog, effectiveStreak, now);
+                                    const pct = progress.pct;
                                     const tier = def.tier ? TIER_STYLES[def.tier] : null;
 
                                     return (
@@ -377,7 +356,7 @@ const Achievements: React.FC = () => {
 
                                             {/* Text */}
                                             <p className={`text-[13px] font-semibold leading-tight mb-0.5 ${isUn ? 'text-slate-800' : 'text-slate-400'}`}>{def.name}</p>
-                                            <p className="text-[11px] text-slate-400 leading-snug mb-3 line-clamp-2">{def.description}</p>
+                                            <p className="text-[11px] text-slate-400 leading-snug mb-3">{def.description}</p>
 
                                             {/* Status */}
                                             {isUn ? (
@@ -393,8 +372,8 @@ const Achievements: React.FC = () => {
                                                         <div className="h-full rounded-full transition-all duration-1000 ease-out"
                                                             style={{ width: `${pct}%`, background: pct > 60 ? 'linear-gradient(90deg, #8CB82A, #A5D63A)' : '#CBD5E1' }} />
                                                     </div>
-                                                    <div className="flex justify-between mt-1.5">
-                                                        <span className="text-[10px] text-slate-400 font-semibold">{prog?.current_value ?? 0}/{def.threshold}</span>
+                                                    <div className="flex flex-wrap justify-between gap-x-2 gap-y-1 mt-1.5">
+                                                        <span className="text-[10px] text-slate-400 font-semibold">{progress.label}</span>
                                                         {pct > 0 && <span className="text-[10px] font-bold text-brand-deep">{Math.round(pct)}%</span>}
                                                     </div>
                                                 </div>
@@ -418,25 +397,27 @@ const Achievements: React.FC = () => {
                         </div>
 
                         <div className="space-y-3">
-                            {nextUp.map((item, i) => (
+                            {nextUp.map(item => (
                                 <div key={item.id}
                                     className="card-base p-4 md:p-5 flex items-center gap-4 group hover:shadow-premium hover:-translate-y-0.5 transition-all duration-300 relative overflow-hidden"
                                 >
                                     {/* Progress fill background */}
                                     <div className="absolute inset-0 pointer-events-none transition-all duration-1000"
-                                        style={{ width: `${item.pct}%`, background: 'linear-gradient(90deg, rgba(140,184,42,0.04), rgba(140,184,42,0.08))' }} />
+                                        style={{ width: `${item.progress.pct}%`, background: 'linear-gradient(90deg, rgba(140,184,42,0.04), rgba(140,184,42,0.08))' }} />
 
                                     <div className="relative z-10 w-11 h-11 rounded-xl bg-brand-lime/10 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
                                         <span className="text-xl">{item.emoji}</span>
                                     </div>
                                     <div className="relative z-10 flex-1 min-w-0">
-                                        <p className="text-sm font-semibold text-slate-800 truncate mb-1">{item.name}</p>
+                                        <p className="text-sm font-semibold text-slate-800 mb-1">{item.name}</p>
+                                        <p className="text-xs text-slate-500 leading-relaxed mb-2">{item.description}</p>
                                         <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
                                             <div className="h-full rounded-full transition-all duration-1000 ease-out"
-                                                style={{ width: `${item.pct}%`, background: 'linear-gradient(90deg, #8CB82A, #A5D63A)' }} />
+                                                style={{ width: `${item.progress.pct}%`, background: 'linear-gradient(90deg, #8CB82A, #A5D63A)' }} />
                                         </div>
+                                        <p className="text-xs text-slate-500 mt-1.5">{item.progress.label}</p>
                                     </div>
-                                    <span className="relative z-10 text-sm font-bold text-brand-deep shrink-0 tabular-nums">{Math.round(item.pct)}%</span>
+                                    <span className="relative z-10 text-sm font-bold text-brand-deep shrink-0 tabular-nums">{Math.round(item.progress.pct)}%</span>
                                 </div>
                             ))}
                         </div>

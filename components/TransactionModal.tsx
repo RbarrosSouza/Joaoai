@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { X, Tag, ChevronDown, Calendar, Repeat, CreditCard, Landmark, Wallet, Layers, CheckCircle2, Circle, Clock, CalendarDays, Trash2 } from 'lucide-react';
 import { useFinance, useCategories } from '../services/FinanceContext';
 import { TransactionType, TransactionFrequency, Transaction } from '../types';
@@ -19,7 +19,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({ onClose, editingTra
   const { addMultipleTransactions, updateTransaction, deleteTransaction, accounts, cards } = useFinance();
   const allCategories = useCategories();
 
-  const activeCategories = allCategories.filter(c => c.isActive !== false);
+  const activeCategories = allCategories.filter(c => c.isActive !== false && (!c.type || c.type === type));
 
   const [type, setType] = useState<TransactionType>(TransactionType.EXPENSE);
   const [amount, setAmount] = useState('');
@@ -32,6 +32,12 @@ const TransactionModal: React.FC<TransactionModalProps> = ({ onClose, editingTra
   const [frequency, setFrequency] = useState<TransactionFrequency>('SINGLE');
   const [totalInstallments, setTotalInstallments] = useState(2);
   const [recurringMonths, setRecurringMonths] = useState(12);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const pendingCreateRef = useRef<{
+    fingerprint: string;
+    eventKey: string;
+    transactions: Transaction[];
+  } | null>(null);
 
   const [categoryId, setCategoryId] = useState(activeCategories[0]?.id || '');
   const [subCategoryId, setSubCategoryId] = useState<string | undefined>(undefined);
@@ -40,6 +46,17 @@ const TransactionModal: React.FC<TransactionModalProps> = ({ onClose, editingTra
   const [selectedSourceId, setSelectedSourceId] = useState(accounts[0]?.id || '');
 
   const selectedCategory = activeCategories.find(c => c.id === categoryId);
+
+  useEffect(() => {
+    if (!activeCategories.some(c => c.id === categoryId)) {
+      setCategoryId(activeCategories[0]?.id || '');
+      setSubCategoryId(undefined);
+    }
+    if (type === TransactionType.INCOME && selectedSourceType === 'CARD') {
+      setSelectedSourceType('ACCOUNT');
+      setSelectedSourceId(accounts[0]?.id || '');
+    }
+  }, [type, allCategories]);
 
   // Se o usuário está começando do zero: ajusta origem automaticamente para evitar estados inválidos.
   useEffect(() => {
@@ -136,7 +153,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({ onClose, editingTra
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!amount || !description || !categoryId) return;
 
@@ -153,6 +170,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({ onClose, editingTra
     }
 
     triggerHaptic(); // Vibrate on submit
+    setIsSubmitting(true);
 
     const baseAmount = parseFloat(amount);
 
@@ -170,16 +188,41 @@ const TransactionModal: React.FC<TransactionModalProps> = ({ onClose, editingTra
         cardId: selectedSourceType === 'CARD' ? selectedSourceId : undefined,
         isPending: !isPaid
       };
-      updateTransaction(editingTransaction.id, updates);
-      onClose();
+      try {
+        await updateTransaction(editingTransaction.id, updates);
+        onClose();
+      } catch {
+        // O contexto já mostra a mensagem de erro e o modal permanece aberto.
+      } finally {
+        setIsSubmitting(false);
+      }
       return;
     }
 
     // IF CREATING NEW
-    const transactionsToCreate: Transaction[] = [];
+    const submissionFingerprint = JSON.stringify({
+      amount: baseAmount,
+      description,
+      dueDate,
+      paymentDate: isPaid ? paymentDate : null,
+      isPaid,
+      type,
+      frequency,
+      totalInstallments,
+      recurringMonths,
+      categoryId,
+      subCategoryId: subCategoryId || null,
+      selectedSourceType,
+      selectedSourceId,
+    });
+    const pendingCreate = pendingCreateRef.current?.fingerprint === submissionFingerprint
+      ? pendingCreateRef.current
+      : null;
+    const transactionsToCreate: Transaction[] = pendingCreate?.transactions ?? [];
+    const eventKey = pendingCreate?.eventKey ?? `web:${uuidv4()}`;
     const groupId = uuidv4();
 
-    if (frequency === 'SINGLE') {
+    if (!pendingCreate && frequency === 'SINGLE') {
       transactionsToCreate.push({
         id: uuidv4(),
         amount: baseAmount,
@@ -195,7 +238,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({ onClose, editingTra
         isPending: !isPaid
       });
     }
-    else if (frequency === 'INSTALLMENT') {
+    else if (!pendingCreate && frequency === 'INSTALLMENT') {
       const installmentValue = baseAmount / totalInstallments;
       for (let i = 0; i < totalInstallments; i++) {
         const installmentDueDate = parseLocalDateString(dueDate);
@@ -221,7 +264,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({ onClose, editingTra
         });
       }
     }
-    else if (frequency === 'RECURRING') {
+    else if (!pendingCreate && frequency === 'RECURRING') {
       for (let i = 0; i < recurringMonths; i++) {
         const recurringDate = parseLocalDateString(dueDate);
         recurringDate.setMonth(recurringDate.getMonth() + i);
@@ -237,21 +280,38 @@ const TransactionModal: React.FC<TransactionModalProps> = ({ onClose, editingTra
           accountId: selectedSourceType === 'ACCOUNT' ? selectedSourceId : undefined,
           cardId: selectedSourceType === 'CARD' ? selectedSourceId : undefined,
           frequency: 'RECURRING',
-          // Apenas a parcela do mês corrente respeita o "Já paguei"; futuras nascem pendentes.
-          isPending: i === 0 ? !isPaid : true
+          isPending: !isPaid
         });
       }
     }
 
-    addMultipleTransactions(transactionsToCreate);
-    onClose();
+    if (!pendingCreate) {
+      pendingCreateRef.current = { fingerprint: submissionFingerprint, eventKey, transactions: transactionsToCreate };
+    }
+
+    try {
+      await addMultipleTransactions(transactionsToCreate, eventKey);
+      pendingCreateRef.current = null;
+      onClose();
+    } catch {
+      // O contexto já mostra a mensagem de erro e o modal permanece aberto.
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     triggerHaptic();
     if (editingTransaction) {
-      deleteTransaction(editingTransaction.id);
-      onClose();
+      setIsSubmitting(true);
+      try {
+        await deleteTransaction(editingTransaction.id);
+        onClose();
+      } catch {
+        // O contexto já mostra a mensagem de erro e o modal permanece aberto.
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -610,7 +670,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({ onClose, editingTra
           )}
           <button
             onClick={handleSubmit}
-            disabled={!amount || !description}
+            disabled={!amount || !description || isSubmitting}
             className="flex-1 bg-brand-deep text-brand-lime py-4 rounded-2xl font-bold text-base shadow-lg hover:shadow-xl hover:bg-brand-deep/95 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {editingTransaction ? 'Salvar Alterações' : 'Confirmar'}

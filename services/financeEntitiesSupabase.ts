@@ -8,6 +8,7 @@ type AccountRow = {
   bank_name: string | null;
   type: string;
   balance: string | number;
+  is_default: boolean;
   icon: string | null;
   color_from: string | null;
   color_to: string | null;
@@ -37,7 +38,7 @@ function toNumber(v: string | number | null | undefined): number {
 export async function fetchAccounts(params: { supabase: SupabaseClient; orgId: string }): Promise<Account[]> {
   const { data, error } = await params.supabase
     .from('accounts')
-    .select('id, org_id, name, bank_name, type, balance, icon, color_from, color_to, is_active')
+    .select('id, org_id, name, bank_name, type, balance, is_default, icon, color_from, color_to, is_active')
     .eq('org_id', params.orgId)
     .eq('is_active', true)
     .order('created_at', { ascending: false });
@@ -50,21 +51,26 @@ export async function fetchAccounts(params: { supabase: SupabaseClient; orgId: s
     bankName: r.bank_name ?? undefined,
     type: r.type as Account['type'],
     balance: toNumber(r.balance),
+    isDefault: r.is_default,
     icon: r.icon ?? 'landmark',
     colorFrom: r.color_from ?? 'from-slate-500',
     colorTo: r.color_to ?? 'to-slate-700',
   }));
 }
 
-export async function upsertAccount(params: { supabase: SupabaseClient; orgId: string; account: Account }): Promise<void> {
-  const payload = {
+export async function upsertAccount(params: {
+  supabase: SupabaseClient;
+  orgId: string;
+  account: Account;
+  preserveBalance?: boolean;
+}): Promise<void> {
+  const metadata = {
     id: params.account.id,
     org_id: params.orgId,
     name: params.account.name,
     bank_name: params.account.bankName ?? null,
     type: params.account.type,
-    initial_balance: params.account.balance,
-    balance: params.account.balance,
+    is_default: params.account.isDefault === true,
     icon: params.account.icon,
     color_from: params.account.colorFrom,
     color_to: params.account.colorTo,
@@ -72,7 +78,15 @@ export async function upsertAccount(params: { supabase: SupabaseClient; orgId: s
     updated_at: new Date().toISOString(),
   };
 
-  const { error } = await params.supabase.from('accounts').upsert(payload, { onConflict: 'id' });
+  const request = params.preserveBalance
+    ? params.supabase.from('accounts').update(metadata).eq('org_id', params.orgId).eq('id', params.account.id)
+    : params.supabase.from('accounts').upsert({
+        ...metadata,
+        initial_balance: params.account.balance,
+        balance: params.account.balance,
+      }, { onConflict: 'id' });
+
+  const { error } = await request;
   if (error) throw error;
 }
 
@@ -135,6 +149,7 @@ export async function deleteCard(params: { supabase: SupabaseClient; orgId: stri
 type CategoryRow = {
   id: string;
   name: string;
+  type: 'INCOME' | 'EXPENSE';
   icon: string | null;
   color: string | null;
   parent_id: string | null;
@@ -203,7 +218,7 @@ export async function deleteSubCategory(params: { supabase: SupabaseClient; orgI
 export async function fetchCategories(params: { supabase: SupabaseClient; orgId: string }): Promise<Category[]> {
   const { data, error } = await params.supabase
     .from('categories')
-    .select('id, name, icon, color, parent_id, is_active')
+    .select('id, name, type, icon, color, parent_id, is_active')
     .eq('org_id', params.orgId)
     .eq('is_active', true)
     .order('name');
@@ -224,6 +239,7 @@ export async function fetchCategories(params: { supabase: SupabaseClient; orgId:
     return {
       id: p.id,
       name: p.name,
+      type: p.type,
       icon: p.icon ?? 'circle',
       color: p.color ?? 'bg-slate-100 text-slate-600',
       subcategories: mySubs,
@@ -232,6 +248,4 @@ export async function fetchCategories(params: { supabase: SupabaseClient; orgId:
     };
   });
 }
-
-
 

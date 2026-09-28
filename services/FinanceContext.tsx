@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode, useMemo, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useMemo, useEffect } from 'react';
 import { Account, AccountType, CreditCard, Transaction, MonthlyStats, TransactionType, Category } from '../types';
 import { CATEGORIES } from '../constants';
 import { useToast } from '../components/Toast';
@@ -6,7 +6,8 @@ import { useAuth } from './AuthContext';
 import { buildDefaultCategories, buildDefaultUserSettings, type UserSettings } from './financeDefaults';
 import { readUserSettings, writeUserSettings } from './financeStorage';
 import { getSupabaseClient } from './supabaseClient';
-import { deleteTransaction as deleteTransactionRemote, fetchActiveOrgId, fetchTransactions, upsertTransactions } from './financeTransactionsSupabase';
+import { changeTransactionType, createTransactions, deleteTransaction as deleteTransactionRemote, fetchActiveOrgId, fetchTransactions, upsertTransactions } from './financeTransactionsSupabase';
+import { useAccess } from './AccessContext';
 import { deleteAccount as deleteAccountRemote, deleteCard as deleteCardRemote, fetchAccounts, fetchCards, fetchCategories, upsertAccount, upsertCard, upsertCategory, archiveCategory, upsertSubCategory, deleteSubCategory as deleteSubCategoryRemote } from './financeEntitiesSupabase';
 import { parseLocalDateString, isoToLocalDateString, toLocalDateString, dateStringToLocalISO, getTodayString } from '../utils/dateUtils';
 
@@ -31,11 +32,11 @@ interface FinanceContextType {
   userSettings: UserSettings;
 
   // Transactions
-  addTransaction: (transaction: Transaction) => void;
-  addMultipleTransactions: (transactions: Transaction[]) => void;
-  updateTransaction: (id: string, updates: Partial<Transaction>) => void;
-  deleteTransaction: (id: string) => void;
-  toggleTransactionStatus: (id: string) => void;
+  addTransaction: (transaction: Transaction) => Promise<void>;
+  addMultipleTransactions: (transactions: Transaction[], eventKey?: string) => Promise<void>;
+  updateTransaction: (id: string, updates: Partial<Transaction>) => Promise<void>;
+  deleteTransaction: (id: string) => Promise<void>;
+  toggleTransactionStatus: (id: string) => Promise<void>;
 
   // Accounts CRUD
   addAccount: (account: Account) => void;
@@ -43,9 +44,9 @@ interface FinanceContextType {
   deleteAccount: (id: string) => void;
 
   // Cards CRUD
-  addCard: (card: CreditCard) => void;
-  updateCard: (id: string, updates: Partial<CreditCard>) => void;
-  deleteCard: (id: string) => void;
+  addCard: (card: CreditCard) => Promise<void>;
+  updateCard: (id: string, updates: Partial<CreditCard>) => Promise<void>;
+  deleteCard: (id: string) => Promise<void>;
 
   // Category Actions
   addCategory: (category: Category) => void;
@@ -74,6 +75,7 @@ const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
 export const FinanceProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { addToast } = useToast();
   const { user } = useAuth();
+  const { refreshAccess } = useAccess();
   const userId = user?.id ?? 'anonymous';
   const supabase = getSupabaseClient();
   const [activeOrgId, setActiveOrgId] = useState<string | null>(null);
@@ -187,48 +189,6 @@ export const FinanceProvider: React.FC<{ children: ReactNode }> = ({ children })
     };
   }, [activeOrgId, supabase, user?.id]);
 
-  // Reconciliação retroativa: transações futuras não-pendentes lançadas pelo código antigo
-  // já tinham debitado/creditado account.balance. Reverter esse impacto uma vez por sessão.
-  const reconciledOrgRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (!activeOrgId || transactions.length === 0 || accounts.length === 0) return;
-    if (reconciledOrgRef.current === activeOrgId) return;
-    reconciledOrgRef.current = activeOrgId;
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const corrections = new Map<string, number>();
-    transactions.forEach((t) => {
-      if (t.isPending) return;
-      const txDate = parseLocalDateString(isoToLocalDateString(t.date));
-      if (txDate <= today) return;
-      const accId = t.accountId || (!t.cardId ? getDefaultAccountId() : undefined);
-      if (!accId) return;
-      const delta = t.type === TransactionType.INCOME ? -t.amount : t.amount; // reverte o impacto antigo
-      corrections.set(accId, (corrections.get(accId) || 0) + delta);
-    });
-
-    if (corrections.size === 0) return;
-
-    const updatedAccounts: Account[] = [];
-    setAccounts((prev) => prev.map((acc) => {
-      const delta = corrections.get(acc.id);
-      if (!delta) return acc;
-      const next = { ...acc, balance: acc.balance + delta };
-      updatedAccounts.push(next);
-      return next;
-    }));
-
-    if (supabase && updatedAccounts.length > 0) {
-      updatedAccounts.forEach((acc) => {
-        void upsertAccount({ supabase, orgId: activeOrgId, account: acc }).catch(() => {
-          // silencioso: a próxima sessão tenta reconciliar de novo
-        });
-      });
-    }
-  }, [activeOrgId, transactions, accounts, supabase]);
-
   // Mantém nome/e-mail coerentes com o cadastro (sem sobrescrever se o usuário personalizou depois).
   useEffect(() => {
     if (!user) return;
@@ -257,8 +217,10 @@ export const FinanceProvider: React.FC<{ children: ReactNode }> = ({ children })
 
   // --- Transactions Logic ---
 
-  // Helper: retorna o ID da conta padrão (primeira WALLET, ou primeira conta disponível)
+  // Helper: retorna a conta principal; preserva o fallback legado para bases ainda não migradas.
   const getDefaultAccountId = (): string | undefined => {
+    const configured = accounts.find(account => account.isDefault === true);
+    if (configured) return configured.id;
     const wallet = accounts.find(a => a.type === AccountType.WALLET);
     if (wallet) return wallet.id;
     return accounts.length > 0 ? accounts[0].id : undefined;
@@ -267,12 +229,6 @@ export const FinanceProvider: React.FC<{ children: ReactNode }> = ({ children })
   // Helper to process balance impacts
   const applyTransactionImpact = (t: Transaction, reverse: boolean = false) => {
     if (t.isPending) return; // Pending transactions don't affect balance yet
-
-    // Transações com data futura também não afetam o saldo até chegarem.
-    const txDate = parseLocalDateString(isoToLocalDateString(t.date));
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    if (txDate > today) return;
 
     const multiplier = reverse ? -1 : 1;
 
@@ -302,11 +258,11 @@ export const FinanceProvider: React.FC<{ children: ReactNode }> = ({ children })
     }
   };
 
-  const addTransaction = (newTransaction: Transaction) => {
-    addMultipleTransactions([newTransaction]);
+  const addTransaction = async (newTransaction: Transaction) => {
+    await addMultipleTransactions([newTransaction]);
   };
 
-  const addMultipleTransactions = (newTransactions: Transaction[]) => {
+  const addMultipleTransactions = async (newTransactions: Transaction[], eventKey?: string) => {
     const defaultAccId = getDefaultAccountId();
 
     const processedTransactions = newTransactions.map(t => {
@@ -340,22 +296,26 @@ export const FinanceProvider: React.FC<{ children: ReactNode }> = ({ children })
       return withDefault;
     });
 
-    setTransactions(prev => [...processedTransactions, ...prev]);
-
-    // Apply impact for each new transaction
-    processedTransactions.forEach(t => applyTransactionImpact(t));
-
-    // Persistência via Supabase
-    if (supabase && user?.id && activeOrgId) {
-      void upsertTransactions({ supabase, orgId: activeOrgId, userId: user.id, transactions: processedTransactions }).catch((err) => {
-        console.error('[upsertTransactions] erro:', JSON.stringify(err, null, 2), err);
-        addToast('Não consegui salvar seus lançamentos no Supabase. Tente novamente.', 'ERROR');
-      });
-    } else if (user?.id) {
-      addToast('Supabase não configurado para salvar lançamentos. Verifique a conexão.', 'ERROR');
-    } else {
-      addToast('Faça login para salvar seus lançamentos definitivamente.', 'INFO');
+    if (!supabase || !user?.id || !activeOrgId) {
+      const message = user?.id
+        ? 'Seu espaço ainda não está pronto para salvar lançamentos.'
+        : 'Faça login para salvar seus lançamentos.';
+      addToast(message, 'ERROR');
+      throw new Error(message);
     }
+
+    try {
+      const result = await createTransactions({ supabase, orgId: activeOrgId, transactions: processedTransactions, eventKey });
+      if (!result.ok || result.failed_count > 0) throw new Error(result.failed[0]?.error || 'Falha ao salvar lançamento.');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Não consegui salvar seus lançamentos.';
+      addToast(message, 'ERROR');
+      throw err;
+    }
+
+    setTransactions(prev => [...processedTransactions, ...prev]);
+    processedTransactions.forEach(t => applyTransactionImpact(t));
+    void refreshAccess();
 
     if (newTransactions.length === 1) {
       addToast('Lançamento adicionado com sucesso!');
@@ -364,53 +324,57 @@ export const FinanceProvider: React.FC<{ children: ReactNode }> = ({ children })
     }
   };
 
-  const updateTransaction = (id: string, updates: Partial<Transaction>) => {
-    let updatedForRemote: Transaction | null = null;
-    setTransactions(prev => {
-      const oldTransaction = prev.find(t => t.id === id);
-      if (!oldTransaction) return prev;
-
-      // 1. Revert impact of old transaction
-      applyTransactionImpact(oldTransaction, true); // Reverse = true
-
-      // 2. Create new transaction object
-      const newTransaction = { ...oldTransaction, ...updates };
-      updatedForRemote = newTransaction;
-
-      // 3. Apply impact of new transaction
-      applyTransactionImpact(newTransaction, false);
-
-      return prev.map(t => t.id === id ? newTransaction : t);
-    });
-    addToast('Lançamento atualizado.');
-
-    if (supabase && user?.id && activeOrgId) {
-      if (updatedForRemote) {
-        void upsertTransactions({ supabase, orgId: activeOrgId, userId: user.id, transactions: [updatedForRemote] }).catch(() => {
-          addToast('Não consegui salvar a atualização no Supabase.', 'ERROR');
+  const updateTransaction = async (id: string, updates: Partial<Transaction>) => {
+    const oldTransaction = transactions.find(t => t.id === id);
+    if (!oldTransaction) return;
+    if (!supabase || !user?.id || !activeOrgId) throw new Error('Seu espaço ainda não está pronto.');
+    const updatedTransaction = { ...oldTransaction, ...updates };
+    try {
+      if (oldTransaction.type !== updatedTransaction.type) {
+        const displayId = Number((oldTransaction as any).displayId ?? (oldTransaction as any).display_id);
+        if (!Number.isInteger(displayId) || displayId < 1) {
+          throw new Error('Este lançamento não possui um código exibido válido para alteração.');
+        }
+        await changeTransactionType({
+          supabase,
+          orgId: activeOrgId,
+          displayId,
+          type: updatedTransaction.type,
+          categoryId: updatedTransaction.categoryId,
+          subCategoryId: updatedTransaction.subCategoryId,
+          accountId: updatedTransaction.accountId,
+          cardId: updatedTransaction.cardId,
+          expectedUpdatedAt: (oldTransaction as any).updatedAt,
         });
+      } else {
+        await upsertTransactions({ supabase, orgId: activeOrgId, userId: user.id, transactions: [updatedTransaction] });
       }
+      applyTransactionImpact(oldTransaction, true);
+      applyTransactionImpact(updatedTransaction, false);
+      setTransactions(prev => prev.map(t => t.id === id ? updatedTransaction : t));
+      addToast('Lançamento atualizado.');
+    } catch (err) {
+      addToast('Não consegui salvar a atualização no Supabase.', 'ERROR');
+      throw err;
     }
   };
 
-  const deleteTransaction = (id: string) => {
+  const deleteTransaction = async (id: string) => {
     const transactionToDelete = transactions.find(t => t.id === id);
-    if (transactionToDelete) {
-      // Revert impact before deleting
+    if (!transactionToDelete) return;
+    if (!supabase || !user?.id || !activeOrgId) throw new Error('Seu espaço ainda não está pronto.');
+    try {
+      await deleteTransactionRemote({ supabase, orgId: activeOrgId, id });
       applyTransactionImpact(transactionToDelete, true);
-
       setTransactions(prev => prev.filter(t => t.id !== id));
       addToast('Lançamento excluído.', 'INFO');
-    }
-
-    if (supabase && user?.id && activeOrgId) {
-      void deleteTransactionRemote({ supabase, orgId: activeOrgId, id }).catch(() => {
-        addToast('Não consegui excluir o lançamento no Supabase.', 'ERROR');
-      });
+    } catch (err) {
+      addToast('Não consegui excluir o lançamento no Supabase.', 'ERROR');
+      throw err;
     }
   };
 
-  const toggleTransactionStatus = (id: string) => {
+  const toggleTransactionStatus = async (id: string) => {
     const transaction = transactions.find(t => t.id === id);
     if (!transaction) return;
 
@@ -418,7 +382,7 @@ export const FinanceProvider: React.FC<{ children: ReactNode }> = ({ children })
     // The logic inside updateTransaction handles the balance reversal/apply
     const newStatus = !transaction.isPending;
 
-    updateTransaction(id, {
+    await updateTransaction(id, {
       isPending: newStatus,
       paymentDate: !newStatus ? (transaction.paymentDate || dateStringToLocalISO(getTodayString())) : undefined
     });
@@ -429,29 +393,32 @@ export const FinanceProvider: React.FC<{ children: ReactNode }> = ({ children })
 
   // --- Accounts CRUD ---
   const addAccount = (account: Account) => {
-    setAccounts(prev => [...prev, account]);
+    const accountToSave = { ...account, isDefault: account.isDefault === true || accounts.length === 0 };
+    setAccounts(prev => accountToSave.isDefault
+      ? [...prev.map(item => ({ ...item, isDefault: false })), accountToSave]
+      : [...prev, accountToSave]);
     addToast('Conta bancária adicionada!');
 
     if (supabase && user?.id && activeOrgId) {
-      void upsertAccount({ supabase, orgId: activeOrgId, account }).catch(() => {
+      void upsertAccount({ supabase, orgId: activeOrgId, account: accountToSave }).catch(() => {
         addToast('Não consegui salvar a conta no Supabase.', 'ERROR');
-        setAccounts((prev) => prev.filter((a) => a.id !== account.id));
+        setAccounts((prev) => prev.filter((a) => a.id !== accountToSave.id));
       });
     }
   };
 
   const updateAccount = (id: string, updates: Partial<Account>) => {
-    let updatedForRemote: Account | null = null;
-    setAccounts(prev => prev.map(a => {
-      if (a.id !== id) return a;
-      const next = { ...a, ...updates };
-      updatedForRemote = next;
-      return next;
+    const current = accounts.find(account => account.id === id);
+    if (!current) return;
+    const updatedForRemote = { ...current, ...updates };
+    setAccounts(prev => prev.map(account => {
+      if (updates.isDefault === true && account.id !== id) return { ...account, isDefault: false };
+      return account.id === id ? updatedForRemote : account;
     }));
     addToast('Conta atualizada com sucesso!');
 
-    if (supabase && user?.id && activeOrgId && updatedForRemote) {
-      void upsertAccount({ supabase, orgId: activeOrgId, account: updatedForRemote }).catch(() => {
+    if (supabase && user?.id && activeOrgId) {
+      void upsertAccount({ supabase, orgId: activeOrgId, account: updatedForRemote, preserveBalance: true }).catch(() => {
         addToast('Não consegui salvar a atualização da conta no Supabase.', 'ERROR');
       });
     }
@@ -469,43 +436,44 @@ export const FinanceProvider: React.FC<{ children: ReactNode }> = ({ children })
   };
 
   // --- Cards CRUD ---
-  const addCard = (card: CreditCard) => {
-    setCards(prev => [...prev, card]);
-    addToast('Cartão adicionado com sucesso!');
-
-    if (supabase && user?.id && activeOrgId) {
-      void upsertCard({ supabase, orgId: activeOrgId, card }).catch(() => {
-        addToast('Não consegui salvar o cartão no Supabase.', 'ERROR');
-        setCards((prev) => prev.filter((c) => c.id !== card.id));
-      });
+  const addCard = async (card: CreditCard) => {
+    if (!supabase || !user?.id || !activeOrgId) throw new Error('Seu espaço ainda não está pronto.');
+    try {
+      await upsertCard({ supabase, orgId: activeOrgId, card });
+      setCards(prev => [...prev, card]);
+      addToast('Cartão adicionado com sucesso!');
+      void refreshAccess();
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : 'Não consegui salvar o cartão.', 'ERROR');
+      throw err;
     }
   };
 
-  const updateCard = (id: string, updates: Partial<CreditCard>) => {
-    let updatedForRemote: CreditCard | null = null;
-    setCards(prev => prev.map(c => {
-      if (c.id !== id) return c;
-      const next = { ...c, ...updates };
-      updatedForRemote = next;
-      return next;
-    }));
-    addToast('Cartão atualizado!');
-
-    if (supabase && user?.id && activeOrgId && updatedForRemote) {
-      void upsertCard({ supabase, orgId: activeOrgId, card: updatedForRemote }).catch(() => {
-        addToast('Não consegui salvar a atualização do cartão no Supabase.', 'ERROR');
-      });
+  const updateCard = async (id: string, updates: Partial<CreditCard>) => {
+    const current = cards.find(c => c.id === id);
+    if (!current) return;
+    if (!supabase || !user?.id || !activeOrgId) throw new Error('Seu espaço ainda não está pronto.');
+    const next = { ...current, ...updates };
+    try {
+      await upsertCard({ supabase, orgId: activeOrgId, card: next });
+      setCards(prev => prev.map(c => c.id === id ? next : c));
+      addToast('Cartão atualizado!');
+    } catch (err) {
+      addToast('Não consegui salvar a atualização do cartão no Supabase.', 'ERROR');
+      throw err;
     }
   };
 
-  const deleteCard = (id: string) => {
-    setCards(prev => prev.filter(c => c.id !== id));
-    addToast('Cartão removido.', 'INFO');
-
-    if (supabase && user?.id && activeOrgId) {
-      void deleteCardRemote({ supabase, orgId: activeOrgId, id }).catch(() => {
-        addToast('Não consegui excluir o cartão no Supabase.', 'ERROR');
-      });
+  const deleteCard = async (id: string) => {
+    if (!supabase || !user?.id || !activeOrgId) throw new Error('Seu espaço ainda não está pronto.');
+    try {
+      await deleteCardRemote({ supabase, orgId: activeOrgId, id });
+      setCards(prev => prev.filter(c => c.id !== id));
+      addToast('Cartão removido.', 'INFO');
+      void refreshAccess();
+    } catch (err) {
+      addToast('Não consegui excluir o cartão no Supabase.', 'ERROR');
+      throw err;
     }
   };
 

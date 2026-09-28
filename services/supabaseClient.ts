@@ -125,7 +125,7 @@ export function getSupabaseClient(): SupabaseClient | null {
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: true,
-      // Importante para SPAs com HashRouter: evita depender de hash para callback.
+      // Importante para SPAs: evita depender de hash para callback.
       flowType: 'pkce',
     },
   });
@@ -137,13 +137,10 @@ export function getSupabaseClient(): SupabaseClient | null {
  * URL de redirect para fluxos de Auth (ex.: confirmação de e-mail / PKCE).
  *
  * Importante:
- * - Este app usa `HashRouter`, então o hash não deve ser a fonte da querystring do callback.
- * - Mantemos o redirect no "base URL" (origin + pathname), para garantir que o `?code=...`
- *   venha na querystring (lido pelo `AuthContext`) e não dentro do hash.
+ * - Mantemos o redirect no domínio base, para garantir que o `?code=...`
+ *   venha na querystring lida pelo `AuthContext`.
  */
 export function getAuthRedirectTo(): string {
   if (typeof window === 'undefined') return '';
-  return `${window.location.origin}${window.location.pathname}`;
+  return window.location.origin;
 }
-
-

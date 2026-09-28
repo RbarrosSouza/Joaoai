@@ -32,7 +32,7 @@ const AuthShell: React.FC<{
             aria-label="Ir para o início"
           >
             <div className="w-10 h-10 bg-white rounded-xl border border-white/60 shadow-premium flex items-center justify-center">
-              <img src="/logo.svg" alt="João.ai" className="w-6 h-6 object-contain" />
+              <img src="/Logos/joao-ai-app-icon.png" alt="João.ai" className="w-6 h-6 rounded-md object-cover" />
             </div>
             <div className="text-left">
               <p className="text-sm font-bold text-brand-deep leading-none">
@@ -59,5 +59,4 @@ const AuthShell: React.FC<{
 };
 
 export default AuthShell;
-
 

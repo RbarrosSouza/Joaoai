@@ -1,24 +1,44 @@
 import React, { useState } from 'react';
 import { Settings as SettingsIcon, User, Bell, Shield, HelpCircle, ChevronLeft, Save, Check, Lock, Mail, CreditCard, ToggleLeft, ToggleRight } from 'lucide-react';
 import { useFinance } from '../services/FinanceContext';
+import { useAccess } from '../services/AccessContext';
+import { getSupabaseClient } from '../services/supabaseClient';
+import { useToast } from './Toast';
 
 type SettingsView = 'MENU' | 'PROFILE' | 'NOTIFICATIONS' | 'SECURITY' | 'HELP';
 
 const Settings: React.FC = () => {
   const { userSettings, updateUserSettings } = useFinance();
+  const { access } = useAccess();
+  const { addToast } = useToast();
+  const supabase = getSupabaseClient();
   const [currentView, setCurrentView] = useState<SettingsView>('MENU');
 
   // Local state for forms
   const [profileForm, setProfileForm] = useState({ name: userSettings.name, email: userSettings.email });
-  const [securityForm, setSecurityForm] = useState({ currentPassword: '', newPassword: '' });
+  const [securityForm, setSecurityForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+  const [savingSecurity, setSavingSecurity] = useState(false);
 
   const handleSaveProfile = () => {
     updateUserSettings(profileForm);
     setCurrentView('MENU');
   };
 
-  const handleSaveSecurity = () => {
-    // Mock save
+  const handleSaveSecurity = async () => {
+    if (!supabase || !userSettings.email) return addToast('Sua sessão não está disponível.', 'ERROR');
+    if (securityForm.newPassword.length < 8) return addToast('A nova senha precisa ter pelo menos 8 caracteres.', 'ERROR');
+    if (securityForm.newPassword !== securityForm.confirmPassword) return addToast('As senhas não conferem.', 'ERROR');
+    setSavingSecurity(true);
+    const auth = await supabase.auth.signInWithPassword({ email: userSettings.email, password: securityForm.currentPassword });
+    if (auth.error) {
+      setSavingSecurity(false);
+      return addToast('A senha atual não confere.', 'ERROR');
+    }
+    const updated = await supabase.auth.updateUser({ password: securityForm.newPassword });
+    setSavingSecurity(false);
+    if (updated.error) return addToast('Não consegui atualizar a senha.', 'ERROR');
+    setSecurityForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    addToast('Senha atualizada com segurança.', 'SUCCESS');
     setCurrentView('MENU');
   };
 
@@ -142,15 +162,15 @@ const Settings: React.FC = () => {
             <div className="card-base p-8 space-y-6">
                 <div>
                     <label className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2 block">Senha Atual</label>
-                    <input type="password" placeholder="••••••••" className="w-full p-4 bg-slate-50 rounded-xl font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-lime/50" />
+                    <input value={securityForm.currentPassword} onChange={e => setSecurityForm({...securityForm, currentPassword: e.target.value})} type="password" autoComplete="current-password" placeholder="••••••••" className="w-full p-4 bg-slate-50 rounded-xl font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-lime/50" />
                 </div>
                 <div>
                     <label className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2 block">Nova Senha</label>
-                    <input type="password" placeholder="••••••••" className="w-full p-4 bg-slate-50 rounded-xl font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-lime/50" />
+                    <input value={securityForm.newPassword} onChange={e => setSecurityForm({...securityForm, newPassword: e.target.value})} type="password" autoComplete="new-password" placeholder="••••••••" className="w-full p-4 bg-slate-50 rounded-xl font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-lime/50" />
                 </div>
                  <div>
                     <label className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2 block">Confirmar Nova Senha</label>
-                    <input type="password" placeholder="••••••••" className="w-full p-4 bg-slate-50 rounded-xl font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-lime/50" />
+                    <input value={securityForm.confirmPassword} onChange={e => setSecurityForm({...securityForm, confirmPassword: e.target.value})} type="password" autoComplete="new-password" placeholder="••••••••" className="w-full p-4 bg-slate-50 rounded-xl font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-lime/50" />
                 </div>
                  
                  <div className="pt-4 border-t border-slate-50 flex items-center justify-between">
@@ -161,8 +181,8 @@ const Settings: React.FC = () => {
                     <ToggleRight size={40} className="text-slate-300 cursor-not-allowed" />
                  </div>
 
-                <button onClick={handleSaveSecurity} className="w-full py-4 bg-brand-deep text-brand-lime rounded-xl font-bold shadow-lg hover:shadow-xl hover:bg-brand-deep/95 transition-all flex items-center justify-center gap-2 mt-4">
-                      <Lock size={18} /> Atualizar Senha
+                <button disabled={savingSecurity} onClick={() => void handleSaveSecurity()} className="w-full py-4 bg-brand-deep text-brand-lime rounded-xl font-bold shadow-lg hover:shadow-xl hover:bg-brand-deep/95 transition-all flex items-center justify-center gap-2 mt-4 disabled:opacity-50">
+                      <Lock size={18} /> {savingSecurity ? 'Atualizando…' : 'Atualizar Senha'}
                 </button>
             </div>
         </div>
@@ -184,7 +204,7 @@ const Settings: React.FC = () => {
                  </div>
                  <div className="card-base p-6">
                      <h3 className="font-bold text-slate-800 mb-2">O app é seguro?</h3>
-                     <p className="text-sm text-slate-500 leading-relaxed">Sim! O FinZen funciona no modelo "Local First". Seus dados ficam salvos no seu navegador e não são enviados para servidores externos.</p>
+                     <p className="text-sm text-slate-500 leading-relaxed">Sim. Seu acesso usa autenticação individual e os dados financeiros ficam separados por organização no Supabase.</p>
                  </div>
                  
                  <div className="mt-8 text-center">
@@ -241,8 +261,12 @@ const Settings: React.FC = () => {
              <SettingsIcon size={20} />
           </div>
           <div>
-             <h4 className="font-bold text-brand-deep text-sm mb-1">Versão 2.0.0 (Premium)</h4>
-             <p className="text-xs text-brand-deep/70">Seu aplicativo está atualizado com as últimas funcionalidades de segurança e design.</p>
+             <h4 className="font-bold text-brand-deep text-sm mb-1">Plano {access?.plan_code === 'pro' ? 'Pro' : access?.plan_code === 'legacy' ? 'Completo' : 'Starter'}</h4>
+             <p className="text-xs text-brand-deep/70">
+               {access?.monthly_transaction_limit
+                 ? `${access.transactions_used} de ${access.monthly_transaction_limit} lançamentos usados neste mês.`
+                 : 'Lançamentos sem limite mensal.'}
+             </p>
           </div>
       </div>
     </div>

@@ -1,5 +1,6 @@
 import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import BrandLockup from '../components/landing/BrandLockup';
 
 const HeroSection = lazy(() => import('../components/landing/HeroSection'));
 const WhatsAppDemo = lazy(() => import('../components/landing/WhatsAppDemo'));
@@ -13,26 +14,19 @@ const CallToAction = lazy(() => import('../components/landing/CallToAction'));
 
 /* ── Hero fallback: shows instantly while real Hero loads ── */
 const HeroFallback: React.FC = () => (
-    <section className="relative w-full min-h-[100svh] bg-brand-darkBg text-white flex flex-col items-center justify-center overflow-hidden pt-20">
-        <div className="relative z-10 w-full max-w-7xl mx-auto px-6 lg:px-12 flex flex-col items-center text-center">
-            <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full border border-brand-lime/20 bg-brand-lime/5 mb-8">
-                <span className="relative flex h-1.5 w-1.5">
-                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-brand-lime" />
-                </span>
-                <span className="text-[11px] font-semibold text-brand-lime/80 tracking-[0.15em] uppercase">Assistente Financeiro Inteligente</span>
+    <section className="relative flex min-h-[100svh] w-full items-center overflow-hidden bg-[#012617] pt-24 text-white">
+        <img src="/images/joao-hero-whatsapp-v3.png" alt="" className="absolute inset-0 h-full w-full object-cover object-[68%_center]" />
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(1,38,23,.98),rgba(1,38,23,.78)_42%,rgba(1,38,23,.16)_75%)]" />
+        <div className="relative z-10 mx-auto w-full max-w-7xl px-6 lg:px-12">
+            <div className="mb-8 flex items-center gap-3 text-[10px] font-semibold uppercase tracking-[0.28em] text-[#d1fb4b]">
+                <span className="h-px w-8 bg-[#d1fb4b]" />
+                Finanças · IA · conversa
             </div>
-            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-light tracking-tight leading-[1.1] mb-6 max-w-4xl mx-auto text-white" style={{ textShadow: '0 16px 32px rgba(0,0,0,0.4)' }}>
-                <span className="font-semibold text-brand-lime">João.ai</span>, o assistente{' '}
-                <br className="hidden sm:block" />
-                financeiro que mora no seu{' '}
-                <span className="font-display italic text-brand-lime font-medium">WhatsApp.</span>
+            <h1 className="max-w-[760px] font-display text-[clamp(3.25rem,7.2vw,7.2rem)] font-bold leading-[0.91] tracking-[-0.075em] text-white">
+                Suas finanças,
+                <span className="block text-[#d1fb4b]">em uma conversa.</span>
             </h1>
-            <p className="text-base md:text-lg text-slate-400 font-light leading-relaxed max-w-xl mx-auto">
-                Gastou? Mande um áudio, foto ou PDF.<br className="hidden sm:block" />
-                O João registra, categoriza e organiza tudo pra você. <span className="text-slate-300 font-normal">Simples assim.</span>
-            </p>
         </div>
-        <div className="absolute bottom-0 left-0 w-full h-48 bg-gradient-to-t from-brand-darkBg to-transparent z-20 pointer-events-none" />
     </section>
 );
 
@@ -91,21 +85,31 @@ const Landing: React.FC = () => {
         <div className="min-h-screen bg-brand-background text-slate-800 font-sans font-light selection:bg-brand-lime/30 scroll-smooth overflow-x-hidden">
             {/* NavBar */}
             <nav
-                className={`fixed top-0 w-full z-50 transition-all duration-500 border-b animate-[slideDown_0.8s_cubic-bezier(0.16,1,0.3,1)] ${scrolled
-                    ? 'bg-brand-darkBg/80 backdrop-blur-2xl border-white/10 shadow-glass py-2 lg:py-3'
-                    : 'bg-transparent border-transparent py-6 lg:py-8'
+                className={`fixed top-0 z-50 w-full animate-[slideDown_0.8s_cubic-bezier(0.16,1,0.3,1)] border-b transition-all duration-500 ${scrolled
+                    ? 'border-white/10 bg-[#012617]/82 py-2.5 shadow-[0_14px_60px_rgba(0,0,0,0.2)] backdrop-blur-2xl lg:py-3'
+                    : 'border-transparent bg-gradient-to-b from-black/45 to-transparent py-5 lg:py-6'
                     }`}
                 style={{ animationFillMode: 'both' }}
             >
                 <div className="max-w-7xl mx-auto px-6 lg:px-12 flex items-center justify-between">
-                    <div className="relative group cursor-pointer" onClick={() => window.scrollTo(0, 0)}>
-                        <div className={`transition-all duration-500 overflow-hidden flex items-center ${scrolled ? 'h-10' : 'h-14'}`}>
-                            <img src="/Logos/joao-logo-high-res.png" alt="João.ai Logo" className="h-[150%] max-w-[250%] w-auto object-contain select-none pointer-events-none" />
-                        </div>
-                    </div>
+                    <button className="group" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} aria-label="Voltar ao início">
+                        <BrandLockup compact={scrolled} />
+                    </button>
 
                     {/* Desktop buttons */}
-                    <div className="hidden md:flex items-center gap-6">
+                    <div className="hidden items-center gap-6 md:flex">
+                        <button onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })} className="text-sm font-medium text-white/65 transition-colors hover:text-white">
+                            Como funciona
+                        </button>
+                        <button onClick={() => document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })} className="text-sm font-medium text-white/65 transition-colors hover:text-white">
+                            Planos
+                        </button>
+                        <button
+                            onClick={() => navigate('/comercial')}
+                            className="text-sm font-medium text-white/65 transition-colors hover:text-white"
+                        >
+                            Para empresas
+                        </button>
                         <button
                             onClick={() => navigate('/login')}
                             className={`text-sm font-medium transition-colors ${scrolled ? 'text-slate-300 hover:text-white' : 'text-white hover:text-brand-lime drop-shadow-md'}`}
@@ -114,9 +118,9 @@ const Landing: React.FC = () => {
                         </button>
                         <button
                             onClick={() => window.open('https://wa.me/5516981737906?text=Quero%20me%20cadastrar%20gratis%20e%20aproveitar%20o%20Jo%C3%A3o.ai', '_blank')}
-                            className="px-6 py-2.5 rounded-full text-sm font-bold text-brand-darkBg bg-brand-lime/90 hover:bg-brand-lime shadow-[0_0_20px_rgba(140,184,42,0.2)] hover:shadow-[0_0_30px_rgba(140,184,42,0.4)] hover:scale-105 active:scale-95 transition-all duration-300"
+                            className="rounded-full border border-[#d1fb4b]/35 bg-[#d1fb4b] px-5 py-2.5 text-sm font-bold text-[#012617] shadow-[0_10px_30px_rgba(209,251,75,0.14)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-white"
                         >
-                            Criar conta grátis
+                            Manda pro João
                         </button>
                     </div>
 
@@ -125,6 +129,8 @@ const Landing: React.FC = () => {
                         onClick={() => setMobileMenu(!mobileMenu)}
                         className="md:hidden relative w-8 h-8 flex flex-col items-center justify-center gap-[5px] z-50"
                         aria-label="Menu"
+                        aria-expanded={mobileMenu}
+                        aria-controls="mobile-navigation"
                     >
                         <span className={`block w-5 h-[2px] rounded-full transition-all duration-300 ${mobileMenu ? 'rotate-45 translate-y-[7px] bg-white' : scrolled ? 'bg-white' : 'bg-white'}`}></span>
                         <span className={`block w-5 h-[2px] rounded-full transition-all duration-300 ${mobileMenu ? 'opacity-0 scale-0' : 'bg-white'}`}></span>
@@ -138,9 +144,16 @@ const Landing: React.FC = () => {
                 <div className="fixed inset-0 z-40 md:hidden" onClick={() => setMobileMenu(false)}>
                     <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
                     <div
+                        id="mobile-navigation"
                         className="absolute top-20 left-4 right-4 bg-brand-darkBg/95 backdrop-blur-2xl rounded-2xl border border-white/10 shadow-2xl p-6 space-y-3 animate-[fadeSlideDown_0.3s_ease-out]"
                         onClick={e => e.stopPropagation()}
                     >
+                        <button
+                            onClick={() => { setMobileMenu(false); navigate('/comercial'); }}
+                            className="w-full rounded-xl py-3 text-center text-sm font-medium text-white transition-colors hover:bg-white/5 hover:text-brand-lime"
+                        >
+                            Para empresas
+                        </button>
                         <button
                             onClick={() => { setMobileMenu(false); navigate('/login'); }}
                             className="w-full py-3 text-center text-sm font-medium text-white hover:text-brand-lime transition-colors rounded-xl hover:bg-white/5"
@@ -152,7 +165,7 @@ const Landing: React.FC = () => {
                             onClick={() => { setMobileMenu(false); window.open('https://wa.me/5516981737906?text=Quero%20me%20cadastrar%20gratis%20e%20aproveitar%20o%20Jo%C3%A3o.ai', '_blank'); }}
                             className="w-full py-3 text-center text-sm font-bold text-brand-darkBg bg-brand-lime/90 hover:bg-brand-lime rounded-xl transition-all duration-300 shadow-[0_0_20px_rgba(140,184,42,0.2)]"
                         >
-                            Criar conta grátis
+                            Manda pro João
                         </button>
                     </div>
                 </div>
@@ -162,6 +175,22 @@ const Landing: React.FC = () => {
                 <Suspense fallback={<HeroFallback />}>
                     <HeroSection />
                 </Suspense>
+                <section aria-label="Resumo do João.ai" className="relative z-20 -mt-px border-y border-white/10 bg-[#012617]">
+                    <div className="mx-auto grid max-w-7xl grid-cols-1 divide-y divide-white/10 px-6 py-5 text-center sm:grid-cols-3 sm:divide-x sm:divide-y-0 lg:px-12">
+                        <div className="px-4 py-3 sm:py-1">
+                            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#d1fb4b]">Conversa simples</p>
+                            <p className="mt-1 text-sm text-white/60">Texto, áudio ou foto</p>
+                        </div>
+                        <div className="px-4 py-3 sm:py-1">
+                            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#d1fb4b]">Organização automática</p>
+                            <p className="mt-1 text-sm text-white/60">Registros prontos em segundos</p>
+                        </div>
+                        <div className="px-4 py-3 sm:py-1">
+                            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#d1fb4b]">Visão completa</p>
+                            <p className="mt-1 text-sm text-white/60">Tudo reunido no seu painel</p>
+                        </div>
+                    </div>
+                </section>
                 <LazySection placeholderClassName="min-h-[600px] !bg-brand-darkBg !border-0">
                     <WhatsAppDemo />
                 </LazySection>
@@ -197,14 +226,7 @@ const Landing: React.FC = () => {
                 <div className="max-w-7xl mx-auto px-6 lg:px-12 flex flex-col md:flex-row items-start md:items-end justify-between gap-12 relative z-10">
 
                     <div className="flex flex-col gap-6">
-                        <div className="flex items-center gap-3">
-                            <div className="relative group">
-                                <div className="h-20 flex items-center justify-center overflow-hidden transition-all">
-                                    <img src="/Logos/joao-logo-high-res.png" alt="João.ai Logo" className="h-full w-auto object-contain" />
-                                </div>
-                                <div className="absolute top-1 -right-2 w-4 h-4 bg-brand-lime rounded-full border-2 border-brand-darkBg shadow-glow animate-pulse-slow"></div>
-                            </div>
-                        </div>
+                        <BrandLockup />
                         <p className="text-sm font-light text-slate-300 max-w-sm leading-relaxed mt-2">
                             Seu concierge financeiro pessoal.<br />
                             Sua tranquilidade financeira em um áudio.

@@ -104,6 +104,12 @@ const Login: React.FC = () => {
           </div>
         </label>
 
+        <div className="-mt-1 text-right">
+          <Link to="/recuperar-acesso" className="text-xs font-bold text-brand-deep hover:underline">
+            Esqueci minha senha
+          </Link>
+        </div>
+
         <button
           type="submit"
           disabled={!canSubmit}
@@ -146,5 +152,4 @@ const Login: React.FC = () => {
 };
 
 export default Login;
-
 

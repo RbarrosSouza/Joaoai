@@ -1,6 +1,7 @@
 import React from 'react';
 import { Outlet } from 'react-router-dom';
 import { AuthProvider } from '../services/AuthContext';
+import { AccessProvider } from '../services/AccessContext';
 
 /**
  * Shell que fornece AuthContext apenas para rotas que precisam de autenticação.
@@ -8,7 +9,9 @@ import { AuthProvider } from '../services/AuthContext';
  */
 const AuthShell: React.FC = () => (
     <AuthProvider>
-        <Outlet />
+        <AccessProvider>
+            <Outlet />
+        </AccessProvider>
     </AuthProvider>
 );
 

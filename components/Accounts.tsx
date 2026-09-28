@@ -101,6 +101,11 @@ const Accounts: React.FC = () => {
                       {getAccountIcon(account.type)}
                   </div>
                   <div className="flex gap-3">
+                     {account.isDefault && (
+                       <div className="bg-brand-lime text-brand-deep px-3 py-1 rounded-full">
+                         <span className="text-[10px] font-extrabold uppercase tracking-wider">Principal</span>
+                       </div>
+                     )}
                      <div className="bg-black/20 backdrop-blur-md px-3 py-1 rounded-full border border-white/5">
                         <span className="text-[10px] font-bold uppercase tracking-wider text-white/90">{getAccountLabel(account.type)}</span>
                      </div>

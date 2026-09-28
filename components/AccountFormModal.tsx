@@ -11,12 +11,13 @@ interface AccountFormModalProps {
 }
 
 const AccountFormModal: React.FC<AccountFormModalProps> = ({ onClose, editingAccount }) => {
-  const { addAccount, updateAccount } = useFinance();
+  const { accounts, addAccount, updateAccount } = useFinance();
   
   const [name, setName] = useState('');
   const [bankName, setBankName] = useState('Nubank');
   const [type, setType] = useState<AccountType>(AccountType.CHECKING);
   const [balance, setBalance] = useState('');
+  const [isDefault, setIsDefault] = useState(accounts.length === 0);
   const [selectedPreset, setSelectedPreset] = useState(BANK_PRESETS[0]);
 
   useEffect(() => {
@@ -25,6 +26,7 @@ const AccountFormModal: React.FC<AccountFormModalProps> = ({ onClose, editingAcc
       setBankName(editingAccount.bankName || '');
       setType(editingAccount.type);
       setBalance(editingAccount.balance.toString());
+      setIsDefault(editingAccount.isDefault === true);
       
       const foundPreset = BANK_PRESETS.find(p => p.colorFrom === editingAccount.colorFrom);
       if (foundPreset) {
@@ -54,6 +56,7 @@ const AccountFormModal: React.FC<AccountFormModalProps> = ({ onClose, editingAcc
       bankName,
       type,
       balance: parseFloat(balance) || 0,
+      isDefault,
       icon: type === AccountType.WALLET ? 'wallet' : 'landmark',
       colorFrom: selectedPreset.colorFrom,
       colorTo: selectedPreset.colorTo
@@ -174,6 +177,22 @@ const AccountFormModal: React.FC<AccountFormModalProps> = ({ onClose, editingAcc
                 </div>
              </div>
           </div>
+
+          <label className={`flex items-start gap-3 rounded-2xl border p-4 ${editingAccount?.isDefault ? 'bg-slate-50 border-slate-200' : 'border-slate-200 cursor-pointer hover:border-brand-lime'}`}>
+            <input
+              type="checkbox"
+              checked={isDefault}
+              disabled={editingAccount?.isDefault === true}
+              onChange={(event) => setIsDefault(event.target.checked)}
+              className="mt-0.5 h-4 w-4 accent-brand-deep"
+            />
+            <span>
+              <span className="block text-sm font-bold text-slate-700">Conta principal</span>
+              <span className="block text-xs text-slate-500 mt-0.5">
+                Usada automaticamente quando um lançamento não informar banco ou conta.
+              </span>
+            </span>
+          </label>
 
         </div>
 

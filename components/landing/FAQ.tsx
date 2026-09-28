@@ -11,6 +11,7 @@ const QAItem: React.FC<{ question: string; answer: React.ReactNode; isOpen: bool
             <button
                 className="w-full text-left py-6 flex justify-between items-center focus:outline-none relative z-10 px-4 md:px-6"
                 onClick={onClick}
+                aria-expanded={isOpen}
             >
                 <span className={`text-xl font-medium transition-colors ${isOpen ? 'text-brand-lime' : 'text-slate-200 group-hover:text-white'}`}>
                     {question}

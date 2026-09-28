@@ -77,17 +77,17 @@ const TransactionItem: React.FC<TransactionItemProps> = ({ t, statusStyle, viewM
             if (swipeOffset > THRESHOLD) {
                 // Swiped Right -> Delete
                 triggerHaptic();
-                deleteTransaction(t.id);
+                void deleteTransaction(t.id).catch(() => {});
             } else if (swipeOffset < -THRESHOLD) {
                 // Swiped Left -> Complete
                 triggerHaptic();
-                toggleTransactionStatus(t.id);
+                void toggleTransactionStatus(t.id).catch(() => {});
             }
         } else {
             if (swipeOffset < -THRESHOLD) {
                 // Swiped Left in History -> Undo/Delete
                 triggerHaptic();
-                deleteTransaction(t.id);
+                void deleteTransaction(t.id).catch(() => {});
             }
         }
         setSwipeOffset(0);
@@ -199,7 +199,7 @@ const TransactionItem: React.FC<TransactionItemProps> = ({ t, statusStyle, viewM
 
                         {viewMode === 'SCHEDULE' && (
                             <button
-                                onClick={(e) => { e.stopPropagation(); toggleTransactionStatus(t.id); }}
+                                onClick={(e) => { e.stopPropagation(); void toggleTransactionStatus(t.id).catch(() => {}); }}
                                 className="w-9 h-9 rounded-full border border-slate-200 text-slate-300 hover:bg-brand-green hover:border-brand-green hover:text-white flex items-center justify-center transition-all shadow-sm active:scale-95 hidden sm:flex"
                                 title="Marcar como Pago"
                             >

@@ -19,6 +19,8 @@ const Pricing: React.FC = () => {
                         <span className={`text-sm font-medium ${!isAnnual ? 'text-slate-800' : 'text-slate-400'}`}>Mensal</span>
                         <button
                             onClick={() => setIsAnnual(!isAnnual)}
+                            aria-label="Alternar entre cobrança mensal e anual"
+                            aria-pressed={isAnnual}
                             className="w-16 h-8 bg-brand-primary rounded-full p-1 relative shadow-inner cursor-pointer"
                         >
                             <motion.div

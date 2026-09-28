@@ -32,6 +32,7 @@ export interface Account {
   bankName?: string; // Ex: Nubank, Itaú
   type: AccountType;
   balance: number;
+  isDefault?: boolean;
   icon: string;
   // Visual props
   colorFrom: string;
@@ -48,6 +49,7 @@ export interface SubCategory {
 export interface Category {
   id: string;
   name: string;
+  type?: TransactionType;
   icon: string;
   color: string; // Tailwind classes like 'bg-red-100 text-red-600'
   budget?: number; // Deprecated in favor of monthlyBudgets, kept for fallback
@@ -58,6 +60,9 @@ export interface Category {
 
 export interface Transaction {
   id: string;
+  /** Número exibido ao usuário no WhatsApp; distinto do code interno. */
+  displayId?: number;
+  updatedAt?: string;
   amount: number;
   description: string;
   date: string; // ISO Date string (Used as Due Date/Competence)

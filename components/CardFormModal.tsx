@@ -27,6 +27,7 @@ const CardFormModal: React.FC<CardFormModalProps> = ({ onClose, editingCard }) =
   const [closingDay, setClosingDay] = useState(1);
   const [dueDay, setDueDay] = useState(10);
   const [selectedSkin, setSelectedSkin] = useState(CARD_SKINS[0]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (editingCard) {
@@ -40,7 +41,7 @@ const CardFormModal: React.FC<CardFormModalProps> = ({ onClose, editingCard }) =
     }
   }, [editingCard]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !limit) return;
 
@@ -55,12 +56,19 @@ const CardFormModal: React.FC<CardFormModalProps> = ({ onClose, editingCard }) =
       currentBill: editingCard ? editingCard.currentBill : 0
     };
 
-    if (editingCard) {
-      updateCard(editingCard.id, cardData);
-    } else {
-      addCard({ ...cardData, id: uuidv4() } as CreditCardType);
+    setIsSubmitting(true);
+    try {
+      if (editingCard) {
+        await updateCard(editingCard.id, cardData);
+      } else {
+        await addCard({ ...cardData, id: uuidv4() } as CreditCardType);
+      }
+      onClose();
+    } catch {
+      // O contexto já informa o motivo e mantém o formulário aberto.
+    } finally {
+      setIsSubmitting(false);
     }
-    onClose();
   };
 
   return (
@@ -184,7 +192,7 @@ const CardFormModal: React.FC<CardFormModalProps> = ({ onClose, editingCard }) =
         <div className="p-6 border-t border-slate-50 bg-slate-50/50 flex justify-end">
             <button 
               onClick={handleSubmit}
-              disabled={!name || !limit}
+              disabled={!name || !limit || isSubmitting}
               className="px-8 py-3 bg-brand-deep text-brand-lime rounded-xl font-bold shadow-lg hover:shadow-xl hover:bg-brand-deep/95 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               <Check size={18} strokeWidth={3} />

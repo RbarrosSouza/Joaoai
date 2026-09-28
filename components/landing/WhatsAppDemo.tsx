@@ -125,8 +125,8 @@ const WhatsAppDemo: React.FC = () => {
                             ) : (
                                 <div className="w-full rounded-[2.5rem] border border-white/10 bg-[#0B2316] shadow-glass p-8 flex flex-col items-center justify-center gap-4 min-h-[520px]">
                                     <div className="w-16 h-16 rounded-full bg-brand-lime/10 flex items-center justify-center text-brand-lime text-lg font-semibold">▶</div>
-                                    <div className="text-sm text-slate-200 font-medium">Demo pronta para tocar</div>
-                                    <div className="text-xs text-slate-400">Role até aqui para iniciar a animação.</div>
+                                    <div className="text-sm text-slate-200 font-medium">A conversa começa aqui</div>
+                                    <div className="text-center text-xs leading-relaxed text-slate-400">Entre nesta seção para ver uma mensagem virar registro financeiro.</div>
                                 </div>
                             )}
                         </Suspense>

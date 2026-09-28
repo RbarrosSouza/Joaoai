@@ -1,5 +1,5 @@
-import React, { Suspense, lazy, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import React, { Suspense, lazy } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ToastProvider } from './components/Toast';
 
 // Caminho da raiz "/" entra no main bundle para evitar waterfall de Suspense
@@ -9,7 +9,10 @@ import AuthShell from './components/AuthShell';
 
 // ── Lazy-loaded pages (code splitting) ──
 const Landing = lazy(() => import('./pages/Landing'));
+const LandingCommercial = lazy(() => import('./pages/LandingCommercial'));
 const Signup = lazy(() => import('./pages/Signup'));
+const SetPassword = lazy(() => import('./pages/SetPassword'));
+const RecoverAccess = lazy(() => import('./pages/RecoverAccess'));
 
 const AppShell = lazy(() => import('./components/AppShell'));
 
@@ -22,6 +25,7 @@ const Categories = lazy(() => import('./components/Categories'));
 const Settings = lazy(() => import('./components/Settings'));
 const Analytics = lazy(() => import('./components/Analytics'));
 const Achievements = lazy(() => import('./components/Achievements'));
+const OperationsConsole = lazy(() => import('./components/operations/OperationsConsole'));
 
 // RequireAuth lazy (depende de AuthContext, só carrega dentro do AuthShell)
 const RequireAuth = lazy(() =>
@@ -35,41 +39,25 @@ const PageLoader: React.FC = () => (
   </div>
 );
 
-// Mantém links antigos no formato /#/rota funcionando durante a migração
-// para URLs limpas, como /vendas e /dashboard.
-const LegacyHashRedirect: React.FC = () => {
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (!window.location.hash.startsWith('#/')) return;
-
-    navigate(
-      {
-        pathname: window.location.hash.slice(1),
-        search: window.location.search,
-      },
-      { replace: true },
-    );
-  }, [navigate]);
-
-  return null;
-};
-
 const App: React.FC = () => {
   return (
     <ToastProvider>
       <BrowserRouter>
-        <LegacyHashRedirect />
         <Suspense fallback={<PageLoader />}>
           <Routes>
             {/* ─── Rotas PÚBLICAS: sem AuthProvider, sem Supabase ─── */}
             <Route path="/vendas" element={<Landing />} />
+            <Route path="/comercial" element={<LandingCommercial />} />
+            <Route path="/v2" element={<LandingCommercial />} />
+            {import.meta.env.DEV && <Route path="/operations-preview" element={<OperationsConsole />} />}
 
             {/* ─── Rotas que precisam de AuthContext ─── */}
             <Route element={<AuthShell />}>
               <Route path="/" element={<Login />} />
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
+              <Route path="/definir-senha" element={<SetPassword />} />
+              <Route path="/recuperar-acesso" element={<RecoverAccess />} />
 
               <Route
                 element={
@@ -87,6 +75,7 @@ const App: React.FC = () => {
                 <Route path="/planning" element={<Planning />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/conquistas" element={<Achievements />} />
+                <Route path="/operations" element={<OperationsConsole />} />
               </Route>
             </Route>
 

@@ -57,12 +57,13 @@ const Signup: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      // Criação de conta: email + senha (telefone fica no metadata para o trigger de provisionamento criar org)
+      // Cadastro web cria Starter. O telefone só é vinculado ao WhatsApp após
+      // confirmação no próprio canal, evitando reassociação indevida.
       const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
         password,
         options: {
-          // Garante callback consistente em produção (HashRouter + PKCE).
+          // Garante callback consistente em produção (BrowserRouter + PKCE).
           emailRedirectTo: getAuthRedirectTo() || undefined,
           data: {
             name: name.trim(),
@@ -96,7 +97,7 @@ const Signup: React.FC = () => {
   return (
     <AuthShell
       title="Criar conta"
-      subtitle="Crie sua conta com e-mail e senha. O telefone é o que conecta seu WhatsApp à sua organização."
+      subtitle="Comece no Starter. Depois, confirme este telefone com o João no WhatsApp para conectar os dois acessos."
     >
       <form onSubmit={submit} className="space-y-4">
         <label className="block">
@@ -128,7 +129,7 @@ const Signup: React.FC = () => {
             />
           </div>
           <p className="mt-2 text-[11px] text-slate-500 leading-relaxed">
-            Esse telefone conecta seu WhatsApp à sua organização no banco.
+            Usaremos este número para confirmar a conexão com o João no WhatsApp.
           </p>
         </label>
 
@@ -226,5 +227,3 @@ const Signup: React.FC = () => {
 };
 
 export default Signup;
-
-

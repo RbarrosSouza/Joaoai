@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { Home, List, CreditCard, PieChart, Plus, Settings, Layers, BarChart3, Landmark, Menu as MenuIcon, X, ChevronRight, Trophy } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Home, List, CreditCard, PieChart, Plus, Settings, Layers, BarChart3, Landmark, Menu as MenuIcon, X, ChevronRight, Trophy, TerminalSquare } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import TransactionModal from './TransactionModal';
+import { operationsConsoleApi } from '../services/operationsConsole';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -12,6 +13,16 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [canAccessOperations, setCanAccessOperations] = useState(false);
+  const isOperations = location.pathname === '/operations';
+
+  useEffect(() => {
+    let active = true;
+    operationsConsoleApi.access()
+      .then(result => { if (active) setCanAccessOperations(result.allowed); })
+      .catch(() => { if (active) setCanAccessOperations(false); });
+    return () => { active = false; };
+  }, []);
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -73,7 +84,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           <div className="relative group cursor-pointer" onClick={() => navigate('/dashboard')}>
             {/* Logo Container */}
             <div className="w-11 h-11 bg-white/5 rounded-xl backdrop-blur-sm border border-white/10 flex items-center justify-center overflow-hidden group-hover:bg-white/10 transition-all shadow-lg">
-              <img src="/logo.svg" alt="João.ai Logo" className="w-8 h-8 object-contain" />
+              <img src="/Logos/joao-ai-app-icon.png" alt="João.ai" className="w-8 h-8 rounded-lg object-cover" />
             </div>
             {/* Status Dot */}
             <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-brand-lime rounded-full border-2 border-brand-deep shadow-glow animate-pulse-slow"></div>
@@ -93,6 +104,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           <NavItem path="/cards" icon={CreditCard} label="Cartões" />
           <NavItem path="/categories" icon={Layers} label="Categorias" />
           <NavItem path="/conquistas" icon={Trophy} label="Conquistas" />
+          {canAccessOperations && <NavItem path="/operations" icon={TerminalSquare} label="Operações" />}
         </nav>
 
         <div className="pt-8 border-t border-white/5 space-y-2 relative z-10">
@@ -114,7 +126,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       </main>
 
       {/* Desktop FAB */}
-      <div className="hidden md:block fixed bottom-10 right-10 z-50">
+      {!isOperations && <div className="hidden md:block fixed bottom-10 right-10 z-50">
         <button
           onClick={() => setIsModalOpen(true)}
           className="bg-brand-deep text-brand-lime pl-6 pr-8 py-4 rounded-full shadow-float hover:scale-105 hover:shadow-premium transition-all active:scale-95 flex items-center gap-3 group border border-white/10 backdrop-blur-md"
@@ -124,7 +136,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           </div>
           <span className="font-bold text-base text-white tracking-wide">Nova Transação</span>
         </button>
-      </div>
+      </div>}
 
       {/* --- MOBILE NAVIGATION --- */}
 
@@ -140,6 +152,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
           {/* Center Space for Floating FAB */}
           <div className="w-20 h-full relative flex justify-center z-50">
+            {!isOperations && <>
             <button
               onClick={() => setIsModalOpen(true)}
               className="absolute -top-6 bg-brand-deep text-brand-lime w-14 h-14 rounded-full shadow-float flex items-center justify-center transform transition-transform active:scale-95 hover:shadow-premium border-4 border-[#F7F9F8]"
@@ -147,6 +160,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               <Plus size={28} strokeWidth={2.5} />
             </button>
             <span className="text-[10px] font-medium tracking-wide text-slate-400 absolute bottom-1">Novo</span>
+            </>}
           </div>
 
           {/* Right Group */}
@@ -188,6 +202,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               <DrawerItem path="/cards" icon={CreditCard} label="Cartões de Crédito" desc="Faturas e limites" colorClass="bg-orange-100 text-orange-600" />
               <DrawerItem path="/categories" icon={Layers} label="Categorias" desc="Organize seus gastos" colorClass="bg-emerald-100 text-emerald-600" />
               <DrawerItem path="/conquistas" icon={Trophy} label="Conquistas" desc="Badges e progresso" colorClass="bg-amber-100 text-amber-600" />
+              {canAccessOperations && <DrawerItem path="/operations" icon={TerminalSquare} label="Centro de Operações" desc="Conversas, erros e testes" colorClass="bg-brand-deep text-brand-lime" />}
               <div className="h-4"></div>
               <DrawerItem path="/settings" icon={Settings} label="Configurações" desc="Perfil, segurança e app" colorClass="bg-slate-100 text-slate-600" />
             </div>
